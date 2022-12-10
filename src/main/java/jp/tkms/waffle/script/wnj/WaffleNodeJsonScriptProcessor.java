@@ -48,7 +48,7 @@ public class WaffleNodeJsonScriptProcessor extends ScriptProcessor {
       "\"nodes\":[{\"type\":\"Begin\",\"id\":\"" + UUID.randomUUID() + "\",\"title\":\"Begin\"," +
       "\"inputs\":{},\"outputs\":{\"next\":{\"id\":\"" + UUID.randomUUID() + "\",\"value\":0}," +
       "\"references\":{\"id\":\"" + UUID.randomUUID() + "\",\"value\":0}}," +
-      "\"position\":{\"x\":142,\"y\":66},\"width\":200,\"twoColumn\":false}]," +
+      "\"position\":{\"x\":100,\"y\":70},\"width\":200,\"twoColumn\":false}]," +
       "\"connections\":[],\"inputs\":[],\"outputs\":[]},\"graphTemplates\":[]}";
   }
 
