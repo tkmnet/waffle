@@ -1,5 +1,6 @@
 package jp.tkms.waffle.communicator;
 
+import com.eclipsesource.json.JsonValue;
 import jp.tkms.waffle.communicator.annotation.CommunicatorDescription;
 import jp.tkms.waffle.communicator.process.RemoteProcess;
 import jp.tkms.waffle.communicator.util.SshSessionSshj;
@@ -10,6 +11,7 @@ import jp.tkms.waffle.data.log.message.ErrorLogMessage;
 import jp.tkms.waffle.data.log.message.InfoLogMessage;
 import jp.tkms.waffle.data.log.message.WarnLogMessage;
 import jp.tkms.waffle.data.util.WrappedJson;
+import jp.tkms.waffle.data.util.WrappedJsonArray;
 import jp.tkms.waffle.exception.FailedToControlRemoteException;
 import jp.tkms.waffle.exception.FailedToTransferFileException;
 
@@ -128,6 +130,30 @@ public class JobNumberLimitedSshSubmitter extends AbstractSubmitter {
   }
 
   @Override
+  public WrappedJsonArray getFormSettings() {
+    WrappedJsonArray settings = super.getFormSettings();
+    {
+      WrappedJson entry = new WrappedJson();
+      entry.put(KEY_NAME, "number_of_calculation_node");
+      entry.put(KEY_LABEL, "Maximum number of jobs");
+      entry.put(KEY_TYPE, "number");
+      entry.put(KEY_CAST, "Integer");
+      entry.put(KEY_DEFAULT, 1);
+      settings.add(entry);
+    }
+    return settings;
+  }
+
+  @Override
+  protected boolean isSubmittable(Computer computer, ComputerTask next, ArrayList<ComputerTask> list) {
+    JsonValue jsonValue = (JsonValue) computer.getParameter(KEY_MAX_JOBS, this);
+    if (jsonValue.isNumber()) {
+      return (list.size() + (next == null ? 0 : 1)) <= jsonValue.asInt();
+    }
+    return false;
+  }
+
+  @Override
   public boolean isConnected() {
     if (session != null) {
       return session.isConnected();
@@ -158,7 +184,7 @@ public class JobNumberLimitedSshSubmitter extends AbstractSubmitter {
 
   @Override
   public Path getAbsolutePath(Path path) throws FailedToControlRemoteException {
-    return parseHomePath(computer.getWorkBaseDirectory()).resolve(path);
+    return getWorkBaseDirectory().resolve(path);
   }
 
   @Override

@@ -19,7 +19,6 @@ import java.util.Map;
 
 public class SendXsubTemplateRequestProcessor extends RequestProcessor<SendXsubTemplateMessage> {
   public static final String XSUB_TYPE = "XSUB_TYPE";
-  public static final String NONE = "None";
 
   protected SendXsubTemplateRequestProcessor() {
   }
@@ -27,8 +26,8 @@ public class SendXsubTemplateRequestProcessor extends RequestProcessor<SendXsubT
   @Override
   protected void processIfMessagesExist(Path baseDirectory, Envelope request, Envelope response, ArrayList<SendXsubTemplateMessage> messageList) throws ClassNotFoundException, IOException {
     Map environments = new HashMap(System.getenv());
-    if (!environments.containsKey(XSUB_TYPE)) {
-      environments.put(XSUB_TYPE, NONE);
+    for (SendXsubTemplateMessage message : messageList) {
+      environments.put(XSUB_TYPE, message.getXsubType());
     }
 
     StringWriter outputWriter = new StringWriter();

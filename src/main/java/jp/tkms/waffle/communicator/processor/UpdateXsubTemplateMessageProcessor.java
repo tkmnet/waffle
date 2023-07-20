@@ -6,6 +6,7 @@ import jp.tkms.waffle.data.computer.Computer;
 import jp.tkms.waffle.data.log.message.ErrorLogMessage;
 import jp.tkms.waffle.data.util.ComputerState;
 import jp.tkms.waffle.data.util.WrappedJson;
+import jp.tkms.waffle.data.util.WrappedJsonArray;
 import jp.tkms.waffle.sub.servant.Envelope;
 import jp.tkms.waffle.sub.servant.message.response.ExceptionMessage;
 import jp.tkms.waffle.sub.servant.message.response.UpdateXsubTemplateMessage;
@@ -22,7 +23,11 @@ public class UpdateXsubTemplateMessageProcessor extends ResponseProcessor<Update
       target.setXsubTemplate(new WrappedJson(message.getTemplate()));
       target.setParameters(target.getParameters());
       target.setState(ComputerState.Viable);
-      target.setMessage("");
+
+      String options = message.getOptions().trim();
+      if (options.length() >= 5 && options.startsWith("[") && options.endsWith("]")) {
+        Computer.updateXsubTypeOptions(new WrappedJsonArray(message.getOptions()));
+      }
     }
   }
 }

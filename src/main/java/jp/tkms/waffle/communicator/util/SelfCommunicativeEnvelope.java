@@ -3,9 +3,11 @@ package jp.tkms.waffle.communicator.util;
 import jp.tkms.waffle.communicator.AbstractSubmitter;
 import jp.tkms.waffle.communicator.process.RemoteProcess;
 import jp.tkms.waffle.data.log.message.ErrorLogMessage;
+import jp.tkms.waffle.data.log.message.InfoLogMessage;
 import jp.tkms.waffle.sub.servant.Envelope;
 import jp.tkms.waffle.sub.servant.EnvelopeTransceiver;
 import jp.tkms.waffle.sub.servant.message.AbstractMessage;
+import net.schmizz.sshj.connection.ConnectionException;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -66,6 +68,8 @@ public class SelfCommunicativeEnvelope extends Envelope {
     try {
       transceiver.shutdown();
       transceiver.waitForShutdown();
+    } catch (ConnectionException e) {
+      InfoLogMessage.issue("Stream connection failed");
     } catch (IOException e) {
       ErrorLogMessage.issue(e);
     }

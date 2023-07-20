@@ -1,6 +1,7 @@
 package jp.tkms.waffle.communicator;
 
 import com.eclipsesource.json.JsonArray;
+import com.eclipsesource.json.JsonValue;
 import jp.tkms.utils.abbreviation.Simple;
 import jp.tkms.utils.concurrent.LockByKey;
 import jp.tkms.waffle.Constants;
@@ -47,8 +48,18 @@ abstract public class AbstractSubmitter {
   protected static final String TASK_JSON = "task.json";
   protected static final String RUN_DIR = "run";
   protected static final String BATCH_FILE = "batch.sh";
+  protected static final String XSUB_TYPE = "XSUB_TYPE";
   static final int INITIAL_PREPARING = 100;
   static final int TIMEOUT = 120000; // 2min
+  public static final String KEY_NAME = "name";
+  public static final String KEY_LABEL = "label";
+  public static final String KEY_TYPE = "type";
+  public static final String KEY_CAST = "cast";
+  public static final String KEY_DEFAULT = "default";
+  public static final String KEY_PLACEHOLDER = "placeholder";
+  public static final String KEY_MAX_JOBS = "maximum_jobs";
+  public static final String KEY_MAX_THREADS = "maximum_threads";
+  public static final String KEY_ALLOCABLE_MEMORY = "allocable_memory";
 
   boolean isRunning = false;
   Computer computer;
@@ -104,6 +115,28 @@ abstract public class AbstractSubmitter {
 
   public AbstractSubmitter connect() {
     return connect(true);
+  }
+
+  public WrappedJsonArray getFormSettings() {
+    WrappedJsonArray settings = new WrappedJsonArray("[]");
+    {
+      WrappedJson entry = new WrappedJson();
+      entry.put(KEY_NAME, "work_base_dir");
+      entry.put(KEY_LABEL, "Work base directory on the computer");
+      entry.put(KEY_TYPE, "text");
+      entry.put(KEY_DEFAULT, "/tmp/waffle");
+      settings.add(entry);
+    }
+    {
+      WrappedJson entry = new WrappedJson();
+      entry.put(KEY_NAME, "polling_interval");
+      entry.put(KEY_LABEL, "Polling interval (seconds)");
+      entry.put(KEY_TYPE, "number");
+      entry.put(KEY_CAST, "Integer");
+      entry.put(KEY_DEFAULT, 10);
+      settings.add(entry);
+    }
+    return settings;
   }
 
   public void close() {
@@ -197,13 +230,15 @@ abstract public class AbstractSubmitter {
     return tempDirectoryPath;
   }
 
-  private Path getRemoteWorkBasePath() {
-    return parseHomePath(computer.getWorkBaseDirectory());
-  }
-
   private static String getServantCommand(AbstractSubmitter submitter, Path remoteEnvelopePath) throws FailedToControlRemoteException {
-    int timeout = submitter.getComputer().getPollingInterval() * 10;
-    return "sh '" + submitter.getAbsolutePath(submitter.getServantScript().getScriptPath()) + "' main '" + (remoteEnvelopePath == null ? "-" : remoteEnvelopePath) + "' " + timeout;
+    int timeout = 100;
+    {
+      JsonValue value = (JsonValue) submitter.getComputer().getParameter(Computer.KEY_POLLING, submitter);
+      if (value != null && value.isNumber()) {
+        timeout = value.asInt() * 10;
+      }
+    }
+    return XSUB_TYPE + "=" + submitter.getComputer().getXsubType() + " sh '" + submitter.getAbsolutePath(submitter.getServantScript().getScriptPath()) + "' main '" + (remoteEnvelopePath == null ? "-" : remoteEnvelopePath) + "' " + timeout;
   }
 
   protected static Envelope sendAndReceiveEnvelope(AbstractSubmitter submitter, Envelope envelope) throws Exception {
@@ -347,10 +382,12 @@ abstract public class AbstractSubmitter {
         envelope.add(new PutTextFileMessage(run.getLocalPath().resolve(TASK_JSON), taskJson.toString()));
         envelope.add(new PutTextFileMessage(run.getLocalPath().resolve(jp.tkms.waffle.sub.servant.Constants.EXEC_KEY), execKey.toString()));
 
+        /*
         String jvmActivationCommand = getJvmActivationCommand().replaceAll("\"", "\\\"");
         if (!jvmActivationCommand.trim().equals("")) {
           jvmActivationCommand += ";";
         }
+         */
 
         //String wsp = getAbsolutePath(getServantScript().getJarPath()).toString();
         //putText(job, BATCH_FILE, "java -jar '" + getWaffleServantPath(this, computer) + "' '" + parseHomePath(computer.getWorkBaseDirectory()) + "' exec '" + getRunDirectory(job.getRun()).resolve(TASK_JSON) + "'");
@@ -378,12 +415,12 @@ abstract public class AbstractSubmitter {
     }
   }
 
-  public String getJvmActivationCommand() {
-    return computer.getJvmActivationCommand();
+  public Path getWorkBaseDirectory() throws FailedToControlRemoteException {
+    return parseHomePath(computer.getParameter(Computer.KEY_WORKBASE, this).toString());
   }
 
-  public Path getWorkBaseDirectory() throws FailedToControlRemoteException {
-    return parseHomePath(computer.getWorkBaseDirectory());
+  private Path getRemoteWorkBasePath() {
+    return parseHomePath(computer.getParameter(Computer.KEY_WORKBASE, this).toString());
   }
 
   public Path getBaseDirectory(ComputerTask run) throws FailedToControlRemoteException {
@@ -403,7 +440,7 @@ abstract public class AbstractSubmitter {
     if (remoteBinPath == null) {
       return null;
     } else {
-      return parseHomePath(job.getComputer().getWorkBaseDirectory()).resolve(remoteBinPath);
+      return getWorkBaseDirectory().resolve(remoteBinPath);
     }
   }
 
@@ -510,7 +547,7 @@ abstract public class AbstractSubmitter {
     } else {
       submitter.connect(retry);
       Envelope request = submitter.getNextEnvelope();
-      request.add(new SendXsubTemplateMessage(computer.getName()));
+      request.add(new SendXsubTemplateMessage(computer.getName(), computer.getXsubType()));
       submitter.processRequestAndResponse(request);
       submitter.close();
     }
@@ -541,7 +578,7 @@ abstract public class AbstractSubmitter {
   }
 
   protected boolean isSubmittable(Computer computer, ComputerTask next, ArrayList<ComputerTask> list) {
-    return (list.size() + (next == null ? 0 : 1)) <= computer.getMaximumNumberOfJobs();
+    return false;
   }
 
   protected static ArrayList<AbstractTask> getJobList(Inspector.Mode mode, Computer computer) {
@@ -598,7 +635,13 @@ abstract public class AbstractSubmitter {
     try {
       isRunning = true;
       Envelope envelope = getNextEnvelope();
-      pollingInterval = computer.getPollingInterval();
+      pollingInterval = 10;
+      {
+        JsonValue value = (JsonValue) getComputer().getParameter(Computer.KEY_POLLING, this);
+        if (value != null && value.isNumber()) {
+          pollingInterval = value.asInt();
+        }
+      }
 
       startupPreparingProcessorManager();
       startupSubmittingProcessorManager();

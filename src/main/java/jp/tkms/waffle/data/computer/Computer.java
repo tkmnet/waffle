@@ -1,5 +1,6 @@
 package jp.tkms.waffle.data.computer;
 
+import com.eclipsesource.json.JsonValue;
 import jp.tkms.waffle.Constants;
 import jp.tkms.waffle.data.HasNote;
 import jp.tkms.waffle.data.util.*;
@@ -13,6 +14,8 @@ import jp.tkms.waffle.data.log.message.ErrorLogMessage;
 import jp.tkms.waffle.data.log.message.InfoLogMessage;
 import jp.tkms.waffle.data.log.message.WarnLogMessage;
 import jp.tkms.waffle.communicator.*;
+import jp.tkms.waffle.web.template.Lte;
+import net.schmizz.sshj.connection.ConnectionException;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
@@ -23,13 +26,11 @@ import java.util.*;
 
 public class Computer implements DataDirectory, PropertyFile, HasNote {
   private static final String KEY_LOCAL = "LOCAL";
-  private static final String KEY_WORKBASE = "work_base_dir";
+  public static final String KEY_WORKBASE = "work_base_dir";
   //private static final String KEY_XSUB = "xsub_dir";
   private static final String KEY_XSUB_TEMPLATE = "xsub_template";
-  private static final String KEY_POLLING = "polling_interval";
-  private static final String KEY_MAX_THREADS = "maximum_threads";
-  private static final String KEY_ALLOCABLE_MEMORY = "allocable_memory";
-  private static final String KEY_MAX_JOBS = "maximum_jobs";
+  private static final String KEY_XSUB_TYPE = "xsub_type";
+  public static final String KEY_POLLING = "polling_interval";
   private static final String KEY_TYPE = "type";
   private static final String KEY_STATE = "state";
   private static final String KEY_ENVIRONMENTS = "environments";
@@ -131,11 +132,11 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
 
     if (getState() == null) { setState(ComputerState.Unviable); }
     //if (getXsubDirectory() == null) { setXsubDirectory(""); }
-    if (getWorkBaseDirectory() == null) { setWorkBaseDirectory("/tmp/waffle"); }
-    if (getMaximumNumberOfThreads() == null) { setMaximumNumberOfThreads(1.0); }
-    if (getAllocableMemorySize() == null) { setAllocableMemorySize(1.0); }
-    if (getPollingInterval() == null) { setPollingInterval(10); }
-    if (getMaximumNumberOfJobs() == null) { setMaximumNumberOfJobs(1); }
+    //if (getWorkBaseDirectory() == null) { setWorkBaseDirectory("/tmp/waffle"); }
+    //if (getMaximumNumberOfThreads() == null) { setMaximumNumberOfThreads(1.0); }
+    //if (getAllocableMemorySize() == null) { setAllocableMemorySize(1.0); }
+    //if (getPollingInterval() == null) { setPollingInterval(10); }
+    //if (getParameter(AbstractSubmitter.KEY_MAX_JOBS) == null) { setMaximumNumberOfJobs(1); }
   }
 
   public static ArrayList<Computer> getViableList() {
@@ -170,6 +171,7 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
 
   public void update() {
     try {
+      setMessage("");
       AbstractSubmitter.checkWaffleServant(this, false);
       AbstractSubmitter.updateXsubTemplate(this, false);
     } catch (RuntimeException | WaffleException e) {
@@ -251,6 +253,7 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
     }
   }
 
+  /*
   public String getWorkBaseDirectory() {
     synchronized (this) {
       if (workBaseDirectory == null) {
@@ -267,7 +270,6 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
     }
   }
 
-  /*
   public String getXsubDirectory() {
     synchronized (this) {
       if (xsubDirectory == null) {
@@ -301,7 +303,6 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
     }
     return directorySeparetor;
   }
-   */
 
   public String getJvmActivationCommand() {
     synchronized (this) {
@@ -334,54 +335,7 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
       this.pollingInterval = pollingInterval;
     }
   }
-
-  public Double getMaximumNumberOfThreads() {
-    synchronized (this) {
-      if (maximumNumberOfThreads == null) {
-        maximumNumberOfThreads = getDoubleFromProperty(KEY_MAX_THREADS);
-      }
-      return maximumNumberOfThreads;
-    }
-  }
-
-  public void setMaximumNumberOfThreads(Double maximumNumberOfThreads) {
-    synchronized (this) {
-      setToProperty(KEY_MAX_THREADS, maximumNumberOfThreads);
-      this.maximumNumberOfThreads = maximumNumberOfThreads;
-    }
-  }
-
-  public Double getAllocableMemorySize() {
-    synchronized (this) {
-      if (allocableMemorySize == null) {
-        allocableMemorySize = getDoubleFromProperty(KEY_ALLOCABLE_MEMORY);
-      }
-      return allocableMemorySize;
-    }
-  }
-
-  public void setAllocableMemorySize(Double allocableMemorySize) {
-    synchronized (this) {
-      setToProperty(KEY_ALLOCABLE_MEMORY, allocableMemorySize);
-      this.allocableMemorySize = allocableMemorySize;
-    }
-  }
-
-  public Integer getMaximumNumberOfJobs() {
-    synchronized (this) {
-      if (maximumNumberOfJobs == null) {
-        maximumNumberOfJobs = getIntFromProperty(KEY_MAX_JOBS);
-      }
-      return maximumNumberOfJobs;
-    }
-  }
-
-  public void setMaximumNumberOfJobs(Integer maximumNumberOfJobs) {
-    synchronized (this) {
-      setToProperty(KEY_MAX_JOBS, maximumNumberOfJobs);
-      this.maximumNumberOfJobs = maximumNumberOfJobs;
-    }
-  }
+   */
 
   public WrappedJson getXsubParameters() {
     WrappedJson jsonObject = new WrappedJson();
@@ -442,8 +396,29 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
     }
   }
 
+  public Object getParameter(String key, AbstractSubmitter submitter) {
+    JsonValue value = getParameters().toJsonObject().get(key);
+    if (value == null || value.isNull()) {
+      value = getJsonValueFromProperty(key);
+    }
+    if (value == null || value.isNull()) {
+      for (JsonValue jsonValue : submitter.getFormSettings().toJsonArray()) {
+        WrappedJson entry = new WrappedJson(jsonValue.asObject());
+        String name = entry.getString(AbstractSubmitter.KEY_NAME, "_" + System.nanoTime());
+        if (name.equals(key)) {
+          value = entry.toJsonObject().get(AbstractSubmitter.KEY_DEFAULT);
+          break;
+        }
+      }
+    }
+    if (value != null && value.isString()) {
+      return value.asString();
+    }
+    return value;
+  }
+
   public Object getParameter(String key) {
-    return getParameters().get(key);
+    return getParameter(key, AbstractSubmitter.getInstance(Inspector.Mode.Normal, this));
   }
 
   public void setParameters(WrappedJson jsonObject) {
@@ -514,6 +489,18 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
     return jsonObject;
   }
 
+  public String getXsubType() {
+    synchronized (this) {
+      return getStringFromProperty(KEY_XSUB_TYPE, "None");
+    }
+  }
+
+  public void setXsubType(String xsubType) {
+    synchronized (this) {
+      setToProperty(KEY_XSUB_TYPE, xsubType);
+    }
+  }
+
   public static Path getBaseDirectoryPath() {
     return Data.getWaffleDirectoryPath().resolve(Constants.COMPUTER);
   }
@@ -569,9 +556,22 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
       } catch (IOException e) {
         ErrorLogMessage.issue(e);
       }
-      computer.setWorkBaseDirectory(localWorkBaseDirectoryPath.toString());
+      computer.setParameter(KEY_WORKBASE, localWorkBaseDirectoryPath.toString());
       computer.update();
       InfoLogMessage.issue(computer, "was added automatically");
+    } else if (getXsubTypeOptions().size() <= 1) {
+      Computer local = Computer.getInstance(KEY_LOCAL);
+      local.update();
     }
+  }
+
+  private static WrappedJsonArray xsubTypeOptions = new WrappedJsonArray("[\"None\"]");
+
+  public static void updateXsubTypeOptions(WrappedJsonArray optionArray) {
+    xsubTypeOptions = optionArray;
+  }
+
+  public static WrappedJsonArray getXsubTypeOptions() {
+    return xsubTypeOptions;
   }
 }
