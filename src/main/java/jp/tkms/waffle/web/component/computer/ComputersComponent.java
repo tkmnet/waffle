@@ -296,6 +296,10 @@ public class ComputersComponent extends AbstractAccessControlledComponent {
       String name = entry.getString(AbstractSubmitter.KEY_NAME, "_" + System.nanoTime());
       Object object = computer.getParameter(name);
       switch (type) {
+        case "xsub":
+          html += Lte.formSelectGroup(name, entry.getString(AbstractSubmitter.KEY_LABEL, ""),
+            Computer.getXsubTypeOptions(), submitter.getXsubType(), errors);
+          break;
         default:
           html += Lte.formInputGroup(type, name,
             entry.getString(AbstractSubmitter.KEY_LABEL, ""),

@@ -80,7 +80,6 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
   @Override
   public WrappedJsonArray getFormSettings() {
     WrappedJsonArray settings = super.getFormSettings();
-    settings.remove(0); // remove work base
     {
       WrappedJson entry = new WrappedJson();
       entry.put(KEY_NAME, "number_of_calculation_node");

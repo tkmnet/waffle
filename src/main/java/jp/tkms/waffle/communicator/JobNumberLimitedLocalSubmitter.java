@@ -36,6 +36,22 @@ public class JobNumberLimitedLocalSubmitter extends AbstractSubmitter {
     WrappedJsonArray settings = super.getFormSettings();
     {
       WrappedJson entry = new WrappedJson();
+      entry.put(KEY_NAME, XSUB_TYPE);
+      entry.put(KEY_LABEL, "Job scheduler type (for xsub)");
+      entry.put(KEY_TYPE, "xsub");
+      entry.put(KEY_DEFAULT, "None");
+      settings.add(entry);
+    }
+    {
+      WrappedJson entry = new WrappedJson();
+      entry.put(KEY_NAME, "work_base_dir");
+      entry.put(KEY_LABEL, "Work base directory on the computer");
+      entry.put(KEY_TYPE, "text");
+      entry.put(KEY_DEFAULT, "/tmp/waffle");
+      settings.add(entry);
+    }
+    {
+      WrappedJson entry = new WrappedJson();
       entry.put(KEY_NAME, "number_of_calculation_node");
       entry.put(KEY_LABEL, "Maximum number of jobs");
       entry.put(KEY_TYPE, "number");

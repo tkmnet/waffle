@@ -48,7 +48,7 @@ abstract public class AbstractSubmitter {
   protected static final String TASK_JSON = "task.json";
   protected static final String RUN_DIR = "run";
   protected static final String BATCH_FILE = "batch.sh";
-  protected static final String XSUB_TYPE = "XSUB_TYPE";
+  public static final String XSUB_TYPE = "XSUB_TYPE";
   static final int INITIAL_PREPARING = 100;
   static final int TIMEOUT = 120000; // 2min
   public static final String KEY_NAME = "name";
@@ -60,6 +60,7 @@ abstract public class AbstractSubmitter {
   public static final String KEY_MAX_JOBS = "maximum_jobs";
   public static final String KEY_MAX_THREADS = "maximum_threads";
   public static final String KEY_ALLOCABLE_MEMORY = "allocable_memory";
+  private static final String KEY_XSUB_TYPE = "xsub_type";
 
   boolean isRunning = false;
   Computer computer;
@@ -119,14 +120,6 @@ abstract public class AbstractSubmitter {
 
   public WrappedJsonArray getFormSettings() {
     WrappedJsonArray settings = new WrappedJsonArray("[]");
-    {
-      WrappedJson entry = new WrappedJson();
-      entry.put(KEY_NAME, "work_base_dir");
-      entry.put(KEY_LABEL, "Work base directory on the computer");
-      entry.put(KEY_TYPE, "text");
-      entry.put(KEY_DEFAULT, "/tmp/waffle");
-      settings.add(entry);
-    }
     {
       WrappedJson entry = new WrappedJson();
       entry.put(KEY_NAME, "polling_interval");
@@ -238,7 +231,7 @@ abstract public class AbstractSubmitter {
         timeout = value.asInt() * 10;
       }
     }
-    return XSUB_TYPE + "=" + submitter.getComputer().getXsubType() + " sh '" + submitter.getAbsolutePath(submitter.getServantScript().getScriptPath()) + "' main '" + (remoteEnvelopePath == null ? "-" : remoteEnvelopePath) + "' " + timeout;
+    return XSUB_TYPE + "=" + submitter.getXsubType() + " sh '" + submitter.getAbsolutePath(submitter.getServantScript().getScriptPath()) + "' main '" + (remoteEnvelopePath == null ? "-" : remoteEnvelopePath) + "' " + timeout;
   }
 
   protected static Envelope sendAndReceiveEnvelope(AbstractSubmitter submitter, Envelope envelope) throws Exception {
@@ -547,10 +540,22 @@ abstract public class AbstractSubmitter {
     } else {
       submitter.connect(retry);
       Envelope request = submitter.getNextEnvelope();
-      request.add(new SendXsubTemplateMessage(computer.getName(), computer.getXsubType()));
+      request.add(new SendXsubTemplateMessage(computer.getName(), submitter.getXsubType()));
       submitter.processRequestAndResponse(request);
       submitter.close();
     }
+  }
+
+  public String getXsubType() {
+    Object object = getComputer().getParameter(KEY_XSUB_TYPE, this);
+    if (object == null) {
+      object = "None";
+    }
+    return object.toString();
+  }
+
+  public void setXsubType(String xsubType) {
+    getComputer().setParameter(KEY_XSUB_TYPE, xsubType);
   }
 
   public static WrappedJson getParameters(Computer computer) {

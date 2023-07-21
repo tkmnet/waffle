@@ -29,7 +29,6 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
   public static final String KEY_WORKBASE = "work_base_dir";
   //private static final String KEY_XSUB = "xsub_dir";
   private static final String KEY_XSUB_TEMPLATE = "xsub_template";
-  private static final String KEY_XSUB_TYPE = "xsub_type";
   public static final String KEY_POLLING = "polling_interval";
   private static final String KEY_TYPE = "type";
   private static final String KEY_STATE = "state";
@@ -489,18 +488,6 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
     return jsonObject;
   }
 
-  public String getXsubType() {
-    synchronized (this) {
-      return getStringFromProperty(KEY_XSUB_TYPE, "None");
-    }
-  }
-
-  public void setXsubType(String xsubType) {
-    synchronized (this) {
-      setToProperty(KEY_XSUB_TYPE, xsubType);
-    }
-  }
-
   public static Path getBaseDirectoryPath() {
     return Data.getWaffleDirectoryPath().resolve(Constants.COMPUTER);
   }
@@ -565,13 +552,21 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
     }
   }
 
-  private static WrappedJsonArray xsubTypeOptions = new WrappedJsonArray("[\"None\"]");
+  private static ArrayList<String> xsubTypeOptions = new ArrayList<>(){{add("None");}};
 
   public static void updateXsubTypeOptions(WrappedJsonArray optionArray) {
-    xsubTypeOptions = optionArray;
+    synchronized (xsubTypeOptions) {
+      xsubTypeOptions.clear();
+      xsubTypeOptions.add("None");
+      for (JsonValue value : optionArray.toJsonArray()) {
+        if (!"None".equals(value.asString())) {
+          xsubTypeOptions.add(value.asString());
+        }
+      }
+    }
   }
 
-  public static WrappedJsonArray getXsubTypeOptions() {
+  public static ArrayList<String> getXsubTypeOptions() {
     return xsubTypeOptions;
   }
 }

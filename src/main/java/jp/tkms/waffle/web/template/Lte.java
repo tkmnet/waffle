@@ -1,5 +1,6 @@
 package jp.tkms.waffle.web.template;
 
+import com.sun.jna.platform.EnumUtils;
 import jp.tkms.utils.concurrent.FutureArrayList;
 import jp.tkms.utils.stream.Editor;
 import jp.tkms.waffle.Main;
@@ -233,21 +234,37 @@ public class Lte {
   }
 
   public static String formSelectGroup(String name, String label, List<String> optionList, ArrayList<FormError> errors) {
+    return formSelectGroup(name, label, optionList, null, errors);
+  }
+
+  public static String formSelectGroup(String name, String label, List<String> optionList, String selected, ArrayList<FormError> errors) {
     LinkedHashMap<String, String> map = new LinkedHashMap<>();
     for (String value : optionList) {
       map.put(value, null);
     }
-    return formSelectGroup(name, label, map, errors);
+    return formSelectGroup(name, label, map, selected, errors);
   }
 
   public static String formSelectGroup(String name, String label, LinkedHashMap<String, String> optionMap, ArrayList<FormError> errors) {
+    return formSelectGroup(name, label, optionMap, null, errors);
+  }
+
+  public static String formSelectGroup(String name, String label, LinkedHashMap<String, String> optionMap, String selected, ArrayList<FormError> errors) {
     String id = "input" + name;
     String options = "";
     for (Map.Entry<String, String> option : optionMap.entrySet()) {
-      if (option.getValue() == null) {
-        options += element("option", null, option.getKey());
+      if (selected != null && selected.equals(option.getKey())) {
+        if (option.getValue() == null) {
+          options += element("option", new Attributes("selected"), option.getKey());
+        } else {
+          options += element("option", new Html.Attributes(Html.value("value", option.getKey()), "selected"), option.getValue());
+        }
       } else {
-        options += element("option", new Html.Attributes(Html.value("value", option.getKey())), option.getValue());
+        if (option.getValue() == null) {
+          options += element("option", null, option.getKey());
+        } else {
+          options += element("option", new Html.Attributes(Html.value("value", option.getKey())), option.getValue());
+        }
       }
     }
     return div("form-group",
