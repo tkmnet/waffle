@@ -2,6 +2,8 @@
 *.iml
 .vscode/
 
+/lib/jdk-*/
+
 .gradle
 
 waffle.dat
