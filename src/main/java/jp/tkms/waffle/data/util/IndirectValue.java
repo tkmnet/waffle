@@ -26,7 +26,7 @@ public class IndirectValue {
   public static final String PREFIX = "[*WAFFLE-";
   public static final String SUFFIX = "]";
   public static final String DELIMITER = "::";
-  public static final Pattern PATTERN = Pattern.compile((PREFIX + "(.)" + DELIMITER + "(.+)" + "(.+)" + SUFFIX).replaceAll("([\\[\\]\\*\\-])","\\\\$1"));
+  public static final Pattern PATTERN = Pattern.compile((PREFIX + "(.)" + DELIMITER + "(.+)" + DELIMITER + "(.+)" + SUFFIX).replaceAll("([\\[\\]\\*\\-])","\\\\$1"));
 
   private String type;
   private String runKey;

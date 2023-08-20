@@ -30,7 +30,7 @@ public class ValueGuard extends Guard {
     }
 
     try {
-      indirectValue = IndirectValue.convert(getValue());
+      indirectValue = IndirectValue.convert(slicedGuard[3]);
     } catch (WarnLogMessage e) {
       indirectValue = null;
     }
