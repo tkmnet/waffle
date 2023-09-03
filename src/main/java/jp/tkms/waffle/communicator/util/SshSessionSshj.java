@@ -295,7 +295,7 @@ public class SshSessionSshj implements AutoCloseable {
             synchronized (sessionCache) {
               try {
                 session.close();
-              } catch (IOException e) {
+              } catch (Throwable e) {
                 //NOP
               }
               synchronized (sessionCache) {
