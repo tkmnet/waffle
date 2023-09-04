@@ -7,6 +7,7 @@ import jp.tkms.waffle.web.component.ResponseBuilder;
 import jp.tkms.waffle.web.component.project.ProjectComponent;
 import jp.tkms.waffle.web.component.project.ProjectsComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.ProjectMainTemplate;
 import jp.tkms.waffle.data.project.Project;
@@ -50,8 +51,8 @@ public class ExecutablesComponent extends AbstractAccessControlledComponent {
     return getUrl(project) + "/@" + mode.name();
   }
 
-  public static String getAnchorLink(Project project) {
-    return Html.a(getUrl(project), EXECUTABLES);
+  public static Link getLink(Project project) {
+    return Link.entry(getUrl(project), EXECUTABLES);
   }
 
   @Override
@@ -88,11 +89,11 @@ public class ExecutablesComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          Html.a(ProjectsComponent.getUrl(), "Projects"),
-          Html.a(ProjectComponent.getUrl(project), project.getName()),
-          Html.a(ExecutablesComponent.getUrl(project), EXECUTABLES)));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          Link.entry(ProjectsComponent.getUrl(), "Projects"),
+          Link.entry(ProjectComponent.getUrl(project), project.getName()),
+          Link.entry(ExecutablesComponent.getUrl(project), EXECUTABLES)));
       }
 
       @Override
@@ -135,10 +136,11 @@ public class ExecutablesComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          Html.a(ProjectsComponent.getUrl(), "Projects"),
-          Html.a(ProjectComponent.getUrl(project), project.getName())));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          ProjectsComponent.getLink(),
+          ProjectComponent.getLink(project),
+          ExecutablesComponent.getLink(project)));
       }
 
       @Override

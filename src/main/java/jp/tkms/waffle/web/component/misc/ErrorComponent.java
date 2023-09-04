@@ -3,6 +3,7 @@ package jp.tkms.waffle.web.component.misc;
 import jp.tkms.waffle.web.component.AbstractAccessControlledComponent;
 import jp.tkms.waffle.web.component.ResponseBuilder;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.MainTemplate;
 import spark.Spark;
 
@@ -37,8 +38,8 @@ public class ErrorComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(new String[]{"" + response.status()}));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(Link.entry("" + response.status())));
       }
 
       @Override

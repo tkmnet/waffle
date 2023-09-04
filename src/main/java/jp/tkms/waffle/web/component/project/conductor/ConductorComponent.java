@@ -21,6 +21,7 @@ import jp.tkms.waffle.web.component.project.ProjectComponent;
 import jp.tkms.waffle.web.component.project.ProjectsComponent;
 import jp.tkms.waffle.web.component.project.workspace.WorkspaceComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.ProjectMainTemplate;
 import jp.tkms.waffle.exception.ProjectNotFoundException;
@@ -79,8 +80,8 @@ public class ConductorComponent extends AbstractAccessControlledComponent {
       + (conductor == null ? ":" + KEY_CONDUCTOR : conductor.getName());
   }
 
-  public static String getAnchorLink(Conductor conductor) {
-    return Html.a(getUrl(conductor), conductor.getName());
+  public static Link getLink(Conductor conductor) {
+    return Link.entry(getUrl(conductor), Html.fasIcon("user-tie") + conductor.getName());
   }
 
   public static String getUrl(Conductor conductor, Mode mode) {
@@ -181,12 +182,12 @@ public class ConductorComponent extends AbstractAccessControlledComponent {
     return TITLE;
   }
 
-  protected ArrayList<String> renderPageBreadcrumb() {
-    return new ArrayList<String>(Arrays.asList(
-      ProjectsComponent.getAnchorLink(),
-      ProjectComponent.getAnchorLink(project),
-      ConductorsComponent.getAnchorLink(project),
-      getAnchorLink(conductor)
+  protected ArrayList<Link> renderPageBreadcrumb() {
+    return new ArrayList<>(Arrays.asList(
+      ProjectsComponent.getLink(),
+      ProjectComponent.getLink(project),
+      ConductorsComponent.getLink(project),
+      getLink(conductor)
     ));
   }
 
@@ -208,7 +209,7 @@ public class ConductorComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
+      protected ArrayList<Link> pageBreadcrumb() {
         return renderPageBreadcrumb();
       }
 
@@ -473,7 +474,7 @@ public class ConductorComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
+      protected ArrayList<Link> pageBreadcrumb() {
         return renderPageBreadcrumb();
       }
 

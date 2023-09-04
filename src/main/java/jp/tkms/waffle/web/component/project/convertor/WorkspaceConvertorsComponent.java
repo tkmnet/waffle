@@ -3,15 +3,14 @@ package jp.tkms.waffle.web.component.project.convertor;
 import jp.tkms.waffle.Main;
 import jp.tkms.waffle.data.project.Project;
 import jp.tkms.waffle.data.project.convertor.WorkspaceConvertor;
-import jp.tkms.waffle.data.project.workspace.Workspace;
 import jp.tkms.waffle.exception.InvalidInputException;
 import jp.tkms.waffle.exception.ProjectNotFoundException;
-import jp.tkms.waffle.script.ScriptProcessor;
 import jp.tkms.waffle.web.component.AbstractAccessControlledComponent;
 import jp.tkms.waffle.web.component.ResponseBuilder;
 import jp.tkms.waffle.web.component.project.ProjectComponent;
 import jp.tkms.waffle.web.component.project.ProjectsComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.ProjectMainTemplate;
 import spark.Spark;
@@ -91,11 +90,11 @@ public class WorkspaceConvertorsComponent extends AbstractAccessControlledCompon
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          ProjectsComponent.getAnchorLink(),
-          ProjectComponent.getAnchorLink(project),
-          WORKSPACE_CONVERTORS
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          ProjectsComponent.getLink(),
+          ProjectComponent.getLink(project),
+          Link.entry(WORKSPACE_CONVERTORS)
         ));
       }
 
@@ -133,7 +132,7 @@ public class WorkspaceConvertorsComponent extends AbstractAccessControlledCompon
         for (WorkspaceConvertor convertor : WorkspaceConvertor.getList(project)) {
           list.add(Main.interfaceThreadPool.submit(() -> {
               Lte.TableRow row = new Lte.TableRow(
-                WorkspaceConvertorComponent.getAnchorLink(convertor),
+                WorkspaceConvertorComponent.getLink(convertor).toHtml(),
                 Html.sanitaize(convertor.getNote())
               );
               row.add(new Lte.TableValue("text-align:right;",
@@ -164,11 +163,11 @@ public class WorkspaceConvertorsComponent extends AbstractAccessControlledCompon
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          ProjectsComponent.getAnchorLink(),
-          Html.a(ProjectComponent.getUrl(project), project.getName()),
-          WorkspaceConvertorComponent.WORKSPACE_CONVERTORS));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          ProjectsComponent.getLink(),
+          Link.entry(ProjectComponent.getUrl(project), project.getName()),
+          Link.entry(WorkspaceConvertorComponent.WORKSPACE_CONVERTORS)));
       }
 
       @Override

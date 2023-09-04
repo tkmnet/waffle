@@ -105,6 +105,10 @@ public class Html {
     return a(href, null, null, value);
   }
 
+  public static String tiIcon(String fa) {
+    return elementWithClass("i", "ti ti-" + fa, "");
+  }
+
   public static String farIcon(String fa) {
     return elementWithClass("i", "far fa-" + fa, "");
   }

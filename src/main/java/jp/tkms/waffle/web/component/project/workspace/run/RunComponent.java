@@ -16,6 +16,7 @@ import jp.tkms.waffle.web.component.project.executable.ExecutableComponent;
 import jp.tkms.waffle.web.component.project.workspace.WorkspaceComponent;
 import jp.tkms.waffle.web.component.project.workspace.WorkspacesComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.ProjectMainTemplate;
 import jp.tkms.waffle.data.project.Project;
@@ -219,12 +220,12 @@ public class RunComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        ArrayList<String> breadcrumb = new ArrayList<String>(Arrays.asList(
-          Html.a(ProjectsComponent.getUrl(), "Projects"),
-          Html.a(ProjectComponent.getUrl(project), project.getName())
+      protected ArrayList<Link> pageBreadcrumb() {
+        ArrayList<Link> breadcrumb = new ArrayList<>(Arrays.asList(
+          Link.entry(ProjectsComponent.getUrl(), "Projects"),
+          Link.entry(ProjectComponent.getUrl(project), project.getName())
         ));
-        ArrayList<String> runNodeList = new ArrayList<>();
+        ArrayList<Link> runNodeList = new ArrayList<>();
         /*
         RunNode parent = runNode.getParent();
         if (parent == null) {
@@ -435,14 +436,14 @@ public class RunComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        ArrayList<String> breadcrumb = new ArrayList<String>(Arrays.asList(
-          Html.a(ProjectsComponent.getUrl(), ProjectComponent.PROJECTS),
-          Html.a(ProjectComponent.getUrl(project), project.getName()),
-          Html.a(WorkspacesComponent.getUrl(project), WorkspaceComponent.WORKSPACES),
-          Html.a(WorkspaceComponent.getUrl(workspace), workspace.getName())
+      protected ArrayList<Link> pageBreadcrumb() {
+        ArrayList<Link> breadcrumb = new ArrayList<>(Arrays.asList(
+          Link.entry(ProjectsComponent.getUrl(), ProjectComponent.PROJECTS),
+          Link.entry(ProjectComponent.getUrl(project), project.getName()),
+          Link.entry(WorkspacesComponent.getUrl(project), WorkspaceComponent.WORKSPACES),
+          Link.entry(WorkspaceComponent.getUrl(workspace), workspace.getName())
         ));
-        ArrayList<String> runNodeList = new ArrayList<>();
+        ArrayList<Link> runNodeList = new ArrayList<>();
         /*
         RunNode parent = run.getRunNode().getParent();
         while (parent != null) {

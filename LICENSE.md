@@ -125,6 +125,9 @@ https://github.com/aterrien/jQuery-Knob/blob/master/LICENSE
 ## flexmark-java
 BSD 2-Clause
 https://github.com/vsch/flexmark-java/blob/master/LICENSE.txt
+## Tabler Icons
+MIT
+https://github.com/tabler/tabler-icons/blob/master/LICENSE
 
 # Included libraries for Software Building
 ## Gradle

@@ -18,6 +18,7 @@ import jp.tkms.waffle.web.component.project.workspace.conductor.StagedConductorC
 import jp.tkms.waffle.web.component.project.workspace.executable.StagedExecutableComponent;
 import jp.tkms.waffle.web.component.project.workspace.run.RunComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.ProjectMainTemplate;
 import spark.Spark;
@@ -44,6 +45,10 @@ public class WorkspacesComponent extends AbstractAccessControlledComponent {
     return ProjectComponent.getUrl(project) + "/" + Workspace.WORKSPACE;
   }
 
+  public static Link getLink(Project project) {
+    return Link.entry(getUrl(project), WORKSPACES);
+  }
+
   @Override
   public void controller() throws ProjectNotFoundException {
     project = Project.getInstance(request.params(ProjectComponent.KEY_PROJECT));
@@ -58,10 +63,12 @@ public class WorkspacesComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          Html.a(ProjectsComponent.getUrl(), "Projects"),
-          Html.a(ProjectComponent.getUrl(project), project.getName())));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          ProjectsComponent.getLink(),
+          ProjectComponent.getLink(project),
+          WorkspacesComponent.getLink(project)
+          ));
       }
 
       @Override

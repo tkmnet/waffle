@@ -5,6 +5,7 @@ import jp.tkms.waffle.web.AlertCookie;
 import jp.tkms.waffle.web.component.AbstractAccessControlledComponent;
 import jp.tkms.waffle.web.component.ResponseBuilder;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.MainTemplate;
 import jp.tkms.waffle.data.project.Project;
@@ -39,8 +40,8 @@ public class ProjectsComponent extends AbstractAccessControlledComponent {
     return "/PROJECT";
   }
 
-  public static String getAnchorLink() {
-    return Html.a(getUrl(), PROJECTS);
+  public static Link getLink() {
+    return Link.entry(getUrl(), PROJECTS);
   }
 
   public static String getUrl(Mode mode) {
@@ -83,10 +84,10 @@ public class ProjectsComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          Html.a(getUrl(), null, null, "Projects"),
-          "Add")
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          Link.entry(getUrl(), "Projects"),
+          Link.entry("Add"))
         );
       }
 
@@ -135,8 +136,8 @@ public class ProjectsComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList("Projects"));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(Link.entry("Projects")));
       }
 
       @Override

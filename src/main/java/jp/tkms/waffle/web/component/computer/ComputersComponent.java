@@ -9,6 +9,7 @@ import jp.tkms.waffle.web.component.AbstractAccessControlledComponent;
 import jp.tkms.waffle.web.component.ResponseBuilder;
 import jp.tkms.waffle.web.component.websocket.PushNotifier;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.MainTemplate;
 import jp.tkms.waffle.data.computer.Computer;
@@ -124,10 +125,10 @@ public class ComputersComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          Html.a(ComputersComponent.getUrl(), COMPUTERS),
-          "@New"));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          Link.entry(ComputersComponent.getUrl(), COMPUTERS),
+          Link.entry("@New")));
       }
 
       @Override
@@ -171,9 +172,10 @@ public class ComputersComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          COMPUTERS));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          Link.entry(COMPUTERS)
+          ));
       }
 
       @Override
@@ -241,10 +243,10 @@ public class ComputersComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          Html.a(ComputersComponent.getUrl(), COMPUTERS),
-          computer.getName()
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<Link>(Arrays.asList(
+          Link.entry(ComputersComponent.getUrl(), COMPUTERS),
+          Link.entry(computer.getName())
         ));
       }
 

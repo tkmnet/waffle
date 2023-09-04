@@ -11,6 +11,7 @@ import jp.tkms.waffle.web.component.project.ProjectComponent;
 import jp.tkms.waffle.web.component.project.ProjectsComponent;
 import jp.tkms.waffle.web.component.project.workspace.run.RunComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.ProjectMainTemplate;
 import jp.tkms.waffle.data.computer.Computer;
@@ -23,7 +24,6 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 public class ExecutableComponent extends AbstractAccessControlledComponent {
   public static final String TITLE = "Executable";
@@ -73,8 +73,8 @@ public class ExecutableComponent extends AbstractAccessControlledComponent {
       + (executable == null ? "/:" + KEY_EXECUTABLE : '/' + executable.getName());
   }
 
-  public static String getAnchorLink(Executable executable) {
-    return Html.a(getUrl(executable), executable.getName());
+  public static Link getLink(Executable executable) {
+    return Link.entry(getUrl(executable), Html.fasIcon("layer-group") + executable.getName());
   }
 
   public static String getUrl(Executable executable, Mode mode) {
@@ -132,12 +132,12 @@ public class ExecutableComponent extends AbstractAccessControlledComponent {
     return TITLE;
   }
 
-  protected ArrayList<String> renderPageBreadcrumb() {
-    return new ArrayList<String>(Arrays.asList(
-      ProjectsComponent.getAnchorLink(),
-      ProjectComponent.getAnchorLink(project),
-      ExecutablesComponent.getAnchorLink(project),
-      getAnchorLink(executable)
+  protected ArrayList<Link> renderPageBreadcrumb() {
+    return new ArrayList<>(Arrays.asList(
+      ProjectsComponent.getLink(),
+      ProjectComponent.getLink(project),
+      ExecutablesComponent.getLink(project),
+      getLink(executable)
     ));
   }
 
@@ -164,7 +164,7 @@ public class ExecutableComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
+      protected ArrayList<Link> pageBreadcrumb() {
         return renderPageBreadcrumb();
       }
 
@@ -385,7 +385,7 @@ public class ExecutableComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
+      protected ArrayList<Link> pageBreadcrumb() {
         return renderPageBreadcrumb();
       }
 

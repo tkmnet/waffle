@@ -13,6 +13,7 @@ import jp.tkms.waffle.script.ruby.util.RubyScript;
 import jp.tkms.waffle.web.component.AbstractAccessControlledComponent;
 import jp.tkms.waffle.web.component.ResponseBuilder;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.MainTemplate;
 import jp.tkms.waffle.web.updater.GeneralUpdater;
@@ -114,8 +115,8 @@ public class HelpComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList("System"));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<Link>(Arrays.asList(Link.entry("System")));
       }
 
       @Override

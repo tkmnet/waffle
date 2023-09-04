@@ -13,6 +13,7 @@ import jp.tkms.waffle.web.component.project.workspace.WorkspaceComponent;
 import jp.tkms.waffle.web.component.project.workspace.WorkspacesComponent;
 import jp.tkms.waffle.web.component.project.workspace.conductor.StagedConductorComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import spark.Spark;
 
 import java.util.ArrayList;
@@ -91,12 +92,12 @@ public class StagedExecutableComponent extends ExecutableComponent {
   }
 
   @Override
-  protected ArrayList<String> renderPageBreadcrumb() {
-    return new ArrayList<String>(Arrays.asList(
-      Html.a(ProjectsComponent.getUrl(), ProjectComponent.PROJECTS),
-      Html.a(ProjectComponent.getUrl(project), project.getName()),
-      Html.a(WorkspacesComponent.getUrl(project), WorkspaceComponent.WORKSPACES),
-      Html.a(WorkspaceComponent.getUrl(workspace), workspace.getName())
+  protected ArrayList<Link> renderPageBreadcrumb() {
+    return new ArrayList<>(Arrays.asList(
+      Link.entry(ProjectsComponent.getUrl(), ProjectComponent.PROJECTS),
+      Link.entry(ProjectComponent.getUrl(project), project.getName()),
+      Link.entry(WorkspacesComponent.getUrl(project), WorkspaceComponent.WORKSPACES),
+      Link.entry(WorkspaceComponent.getUrl(workspace), workspace.getName())
     ));
   }
 }
