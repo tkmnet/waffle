@@ -28,6 +28,7 @@ public class ConductorRun extends AbstractRun implements DataDirectory {
   public static final String VARIABLES_JSON_FILE = "VARIABLES" + Constants.EXT_JSON;
   public static final String KEY_CONDUCTOR = "conductor";
   public static final String KEY_ACTIVE_RUN = "active_run";
+  public static final String KEY_STARTUP_VARIABLES = "startup_variables";
   public static final String KEY_ACTIVE_EXECUTABLE_RUN = "active_executable_run";
   private static final String TRASHBIN_DIR = ".TRASH";
   private static final String ESCAPING_WAFFLE_WORKSPACE_NAME = "<#WAFFLE_WORKSPACE_NAME>";
@@ -79,6 +80,7 @@ public class ConductorRun extends AbstractRun implements DataDirectory {
     setState(State.Running);
     if (conductor != null) {
       expandEscaping();
+      setToProperty(KEY_STARTUP_VARIABLES, getVariables());
       ProcedureRun procedureRun = ProcedureRun.create(this, conductor, Key.MAIN_PROCEDURE);
       procedureRun.start();
 
@@ -116,6 +118,10 @@ public class ConductorRun extends AbstractRun implements DataDirectory {
     }
 
     setState(nextState);
+  }
+
+  public WrappedJson getStartupVariables() {
+    return getObjectFromProperty(KEY_STARTUP_VARIABLES);
   }
 
   protected Path getVariablesStorePath() {

@@ -6,6 +6,8 @@ package jp.tkms.waffle.web.component.project.workspace;
   import jp.tkms.waffle.data.project.workspace.conductor.StagedConductor;
   import jp.tkms.waffle.data.project.workspace.executable.StagedExecutable;
   import jp.tkms.waffle.data.project.workspace.run.AbstractRun;
+  import jp.tkms.waffle.data.project.workspace.run.ConductorRun;
+  import jp.tkms.waffle.data.util.WrappedJson;
   import jp.tkms.waffle.web.component.AbstractAccessControlledComponent;
   import jp.tkms.waffle.web.component.ResponseBuilder;
   import jp.tkms.waffle.web.component.project.ProjectComponent;
@@ -224,6 +226,18 @@ public class WorkspaceComponent extends AbstractAccessControlledComponent {
             }
           })
           , null, "card-outline", "p-0");
+
+        WrappedJson conductorStartupVariables = ConductorRun.getInstance(workspace, RunComponent.getUrlFromPath(AbstractRun.getBaseDirectoryPath(workspace))).getStartupVariables();
+        if (conductorStartupVariables != null) {
+          contents += Lte.card(Html.fasIcon("list-ol") + "Startup Variables",
+            Lte.cardToggleButton(false),
+            Lte.divRow(
+              Lte.divCol(Lte.DivSize.F12,
+                Lte.formJsonEditorGroup(ConductorRun.KEY_STARTUP_VARIABLES, null, "tree", conductorStartupVariables.toString(), null)
+              )
+            ), null,
+            "collapsed-card.stop card-secondary card-outline", null);
+        }
 
         String scriptLog = workspace.getScriptOutput();
         contents += Lte.divRow(

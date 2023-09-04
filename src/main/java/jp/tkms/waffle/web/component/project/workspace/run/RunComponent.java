@@ -5,6 +5,7 @@ import jp.tkms.waffle.Main;
 import jp.tkms.waffle.data.project.workspace.HasLocalPath;
 import jp.tkms.waffle.data.project.workspace.Workspace;
 import jp.tkms.waffle.data.project.workspace.run.*;
+import jp.tkms.waffle.data.util.WrappedJson;
 import jp.tkms.waffle.exception.RunNotFoundException;
 import jp.tkms.waffle.web.component.AbstractAccessControlledComponent;
 import jp.tkms.waffle.web.component.ResponseBuilder;
@@ -39,6 +40,7 @@ public class RunComponent extends AbstractAccessControlledComponent {
   private AbstractRun abstractRun;
   private ArrayList<HasLocalPath> childrenList = null;
   private String directoryName;
+  WrappedJson conductorStartupVariables = null;
 
   public enum Mode {Default, ReCheck, UpdateNote, Root, Abort, Cancel}
 
@@ -147,12 +149,18 @@ public class RunComponent extends AbstractAccessControlledComponent {
         return;
     }
 
-    childrenList = (abstractRun == null ? AbstractRun.getDirectoryList(workspace) : AbstractRun.getDirectoryList((ConductorRun)abstractRun));
     /*
     if (Paths.get(request.uri()).relativize(Paths.get(request.headers("Referer").replaceFirst("^.*?/PROJECT/", "/PROJECT/"))).toString().contains("..") && runList.size() == 1) {
       response.redirect(RunComponent.getUrl(runList.get(0)));
     }
      */
+    if (abstractRun == null) {
+      childrenList = AbstractRun.getDirectoryList(workspace);
+      conductorStartupVariables = ConductorRun.getInstance(workspace, RunComponent.getUrlFromPath(AbstractRun.getBaseDirectoryPath(workspace))).getStartupVariables();
+    } else {
+      childrenList = AbstractRun.getDirectoryList((ConductorRun)abstractRun);
+      conductorStartupVariables = ((ConductorRun) abstractRun).getStartupVariables();
+    }
 
     renderRuns();
   }
@@ -388,6 +396,16 @@ public class RunComponent extends AbstractAccessControlledComponent {
           })
           , null, null, "p-0");
          */
+        if (conductorStartupVariables != null) {
+          contents += Lte.card(Html.fasIcon("list-ol") + "Startup Variables",
+            Lte.cardToggleButton(false),
+            Lte.divRow(
+              Lte.divCol(Lte.DivSize.F12,
+                Lte.formJsonEditorGroup(ConductorRun.KEY_STARTUP_VARIABLES, null, "tree", conductorStartupVariables.toString(), null)
+              )
+            ), null,
+            "collapsed-card.stop card-secondary card-outline", null);
+        }
 
         return contents;
       }
