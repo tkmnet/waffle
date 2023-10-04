@@ -60,7 +60,7 @@ abstract public class AbstractSubmitter {
   public static final String KEY_MAX_JOBS = "maximum_jobs";
   public static final String KEY_MAX_THREADS = "maximum_threads";
   public static final String KEY_ALLOCABLE_MEMORY = "allocable_memory";
-  private static final String KEY_XSUB_TYPE = "xsub_type";
+  public static final String KEY_XSUB_TYPE = "xsub_type";
 
   boolean isRunning = false;
   Computer computer;

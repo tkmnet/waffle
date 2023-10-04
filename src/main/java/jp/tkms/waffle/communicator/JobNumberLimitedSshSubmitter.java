@@ -134,7 +134,7 @@ public class JobNumberLimitedSshSubmitter extends AbstractSubmitter {
     WrappedJsonArray settings = super.getFormSettings();
     {
       WrappedJson entry = new WrappedJson();
-      entry.put(KEY_NAME, XSUB_TYPE);
+      entry.put(KEY_NAME, KEY_XSUB_TYPE);
       entry.put(KEY_LABEL, "Job scheduler type (for xsub)");
       entry.put(KEY_TYPE, "xsub");
       entry.put(KEY_DEFAULT, "None");

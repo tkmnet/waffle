@@ -97,11 +97,13 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
 
   public static Computer getInstance(String name) {
     if (name != null && !name.equals("") && Files.exists(getBaseDirectoryPath().resolve(name))) {
-      Computer computer = instanceCache.get(name);
-      if (computer == null) {
-        computer = new Computer(name);
+      synchronized (instanceCache) {
+        Computer computer = instanceCache.get(name);
+        if (computer == null) {
+          computer = new Computer(name);
+        }
+        return computer;
       }
-      return computer;
     }
     return null;
   }
@@ -406,6 +408,9 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
         String name = entry.getString(AbstractSubmitter.KEY_NAME, "_" + System.nanoTime());
         if (name.equals(key)) {
           value = entry.toJsonObject().get(AbstractSubmitter.KEY_DEFAULT);
+          if (value != null) {
+            setParameter(name, value);
+          }
           break;
         }
       }
