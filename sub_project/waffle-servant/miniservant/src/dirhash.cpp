@@ -103,9 +103,7 @@ namespace miniservant
                 collectDirectoryStatusTo(fileSet, target);
             else if (target.filename().string() != HASH_FILE && !target.filename().string().ends_with(IGNORE_FLAG))
             {
-                auto heap = _new_normalized_path(std::filesystem::relative(target, *this->baseDirectory));
-                (*fileSet).insert(heap->string() + SEPARATOR + std::to_string(std::filesystem::file_size(target)));
-                delete heap;
+                (*fileSet).insert(target.filename().string() + SEPARATOR + std::to_string(std::filesystem::file_size(target)));
             }
         }
     };

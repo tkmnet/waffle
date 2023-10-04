@@ -14,12 +14,10 @@ import jp.tkms.waffle.web.updater.AbstractUpdater;
 import jp.tkms.waffle.data.web.BrowserMessage;
 import jp.tkms.waffle.data.internal.task.ExecutableRunTask;
 import jp.tkms.waffle.script.ruby.util.RubyScript;
-import org.jruby.RubyProcess;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Map;
+import java.util.*;
 
 import static jp.tkms.waffle.web.template.Html.*;
 
@@ -39,6 +37,7 @@ abstract public class MainTemplate extends AbstractTemplate {
           link("stylesheet", "/css/adminlte.min.css"),
           link("stylesheet", "/css/fontawesome-free.min.css"),
           link("stylesheet", "/css/ionicons.min.css"),
+          link("stylesheet", "/css/tabler-icons.min.css"),
           link("stylesheet", "/css/gfonts.css"),
           link("stylesheet", "/css/select2.min.css"),
           link("stylesheet", "/css/icheck-bootstrap.min.css"),
@@ -103,9 +102,9 @@ abstract public class MainTemplate extends AbstractTemplate {
                         )
                       )
                     ),
-                    div("col-sm-6",
-                      renderPageWorkingDirectoryButton(component.request.ip()),
-                      renderPageBreadcrumb()
+                    div("col-sm-6 text-right",
+                      renderPageBreadcrumb(),
+                      renderPageWorkingDirectoryButton(component.request.ip())
                     )
                   ),
                   div(null, pageTool())
@@ -165,9 +164,9 @@ abstract public class MainTemplate extends AbstractTemplate {
       Path directoryPath = pageWorkingDirectory().toAbsolutePath().normalize();
       if (Files.exists(directoryPath)) {
         if ("127.0.0.1".equals(clientIP) && System.getenv().containsKey(Constants.WAFFLE_OPEN_COMMAND)) {
-          return Html.div("float-sm-right wd-button", " " + Lte.openButton(Html.fasIcon("folder"), directoryPath.toString()));
+          return Html.div("d-inline", " " + Lte.openButton(Html.fasIcon("folder"), directoryPath.toString()));
         } else {
-          return Html.div("float-sm-right wd-button", " " + Lte.clipboardButton(Html.fasIcon("folder"), directoryPath.toString()));
+          return Html.div("d-inline", " " + Lte.clipboardButton(Html.fasIcon("folder"), directoryPath.toString()));
         }
       }
     }
@@ -269,18 +268,26 @@ abstract public class MainTemplate extends AbstractTemplate {
   }
 
   String renderPageBreadcrumb() {
-    String innerContent = elementWithClass("li", "breadcrumb-item",
-      a(Constants.ROOT_PAGE, null, null, fasIcon("home"))
-    );
+    String innerContent = "";
 
-    ArrayList<String> breadcrumb = pageBreadcrumb();
+    ArrayList<Link> breadcrumb = pageBreadcrumb();
+    Collections.reverse(breadcrumb);
+    breadcrumb.add(Link.entry(Constants.ROOT_PAGE, fasIcon("home")));
+    Link top = breadcrumb.remove(0);
+
     for (int i = 0; i < breadcrumb.size(); i++) {
-      String crumb = breadcrumb.get(i);
-      innerContent += elementWithClass("li",
-        "breadcrumb-item" + (i == (breadcrumb.size() - 1) ? " active" : ""), crumb);
+      Link link = breadcrumb.get(i);
+      if (link == null) {
+        innerContent += elementWithClass("li", null, attribute("hr", value("class", "dropdown-divider")));
+      } else {
+        innerContent += elementWithClass("li", null, a(link.getTarget(), "dropdown-item", null, link.getKey()));
+      }
     }
 
-    return elementWithClass("ol", "breadcrumb float-sm-right", innerContent);
+    return Html.div("d-inline dropdown",
+      element("button", new Attributes(value("class", "btn btn-outline-secondary btn-sm dropdown-toggle"),
+        value("id", "pageBreadcrumb"), value("type", "button"), value("data-toggle", "dropdown"), value("aria-haspopup","true"), value("aria-expanded","false")), top.getKey()),
+      element("ul", new Attributes(value("class", "dropdown-menu dropdown-menu-right"), value("aria-labelledby", "pageBreadcrumb")), innerContent));
   }
 
   protected ArrayList<String> pageRightNavigation() {
@@ -312,7 +319,7 @@ abstract public class MainTemplate extends AbstractTemplate {
 
   protected String pageTool() { return ""; };
 
-  protected abstract ArrayList<String> pageBreadcrumb();
+  protected abstract ArrayList<Link> pageBreadcrumb();
 
   protected abstract String pageContent();
 }

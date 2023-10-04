@@ -31,9 +31,9 @@ public class CancelJobRequestProcessor extends RequestProcessor<CancelJobMessage
       environments.put(XSUB_TYPE, NONE);
     }
 
-    messageList.stream().limit(8).parallel().forEach(message -> {
+    messageList.stream().parallel().forEach(message -> {
       ScriptingContainer container = new ScriptingContainer(LocalContextScope.SINGLETHREAD, LocalVariableBehavior.TRANSIENT);
-      //synchronized (this) {
+      synchronized (this) {
         try {
           container.setEnvironment(environments);
           container.setArgv(new String[]{message.getJobId()});
@@ -42,7 +42,7 @@ public class CancelJobRequestProcessor extends RequestProcessor<CancelJobMessage
         } catch (Exception e) {
           e.printStackTrace();
         }
-      //}
+      }
       container.clear();
       try {
         container.finalize();

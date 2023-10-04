@@ -1,9 +1,11 @@
 package jp.tkms.waffle.web.component.log;
 
 import jp.tkms.waffle.Main;
+import jp.tkms.waffle.web.Key;
 import jp.tkms.waffle.web.component.AbstractAccessControlledComponent;
 import jp.tkms.waffle.web.component.ResponseBuilder;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.MainTemplate;
 import jp.tkms.waffle.data.log.Log;
@@ -99,9 +101,8 @@ public class LogsComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          "Logs"));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<Link>(Arrays.asList(Link.entry("Logs")));
       }
 
       @Override

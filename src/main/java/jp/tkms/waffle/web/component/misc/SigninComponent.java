@@ -7,6 +7,7 @@ import jp.tkms.waffle.web.component.AbstractComponent;
 import jp.tkms.waffle.web.component.ResponseBuilder;
 import jp.tkms.waffle.web.component.project.ProjectsComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.MainTemplate;
 import jp.tkms.waffle.data.web.UserSession;
@@ -111,8 +112,8 @@ public class SigninComponent extends AbstractComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList());
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList());
       }
 
       @Override
@@ -162,8 +163,8 @@ public class SigninComponent extends AbstractComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList());
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList());
       }
 
       @Override

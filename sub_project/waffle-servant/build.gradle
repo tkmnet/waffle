@@ -25,7 +25,7 @@ dependencies {
     implementation group: 'com.esotericsoftware', name: 'kryo', version: '5.1.1'
     implementation group: 'commons-io', name: 'commons-io', version: '2.8.0'
     implementation group: 'org.jetbrains.pty4j', name: 'pty4j', version: '0.11.4'
-    implementation 'org.jruby:jruby-complete:9.3.9.0'
+    implementation 'org.jruby:jruby-complete:9.4.3.0'
 }
 
 tasks.named('test') {

@@ -13,9 +13,7 @@ import org.jruby.embed.LocalVariableBehavior;
 import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.StringWriter;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -35,7 +33,7 @@ public class SubmitJobRequestProcessor extends RequestProcessor<SubmitJobMessage
   @Override
   protected void processIfMessagesExist(Path baseDirectory, Envelope request, Envelope response, ArrayList<SubmitJobMessage> messageList) throws ClassNotFoundException, IOException {
     ArrayList<Path> removingList = new ArrayList<>();
-    Map environments = new HashMap(System.getenv());
+    Map<String, String> environments = new HashMap(System.getenv());
     if (!environments.containsKey(XSUB_TYPE)) {
       environments.put(XSUB_TYPE, NONE);
     }
@@ -99,6 +97,23 @@ public class SubmitJobRequestProcessor extends RequestProcessor<SubmitJobMessage
         DirectoryHash directoryHash = new DirectoryHash(baseDirectory, message.getWorkingDirectory());
         directoryHash.createEmptyHashFile();
 
+        final String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
+        final File currentJar = new File(this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+        ProcessBuilder processBuilder = new ProcessBuilder(javaBin, "-cp", currentJar.toString(),
+          "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED",
+          "org.jruby.Main", XsubFile.getXsubPath(baseDirectory).toString(),
+          "-p", message.getXsubParameter(), message.getCommand());
+        processBuilder.directory(workingDirectory.toFile());
+        environments.entrySet().forEach(entry -> {
+          processBuilder.environment().put(entry.getKey(), entry.getValue());
+        });
+        Process process = processBuilder.start();
+        Thread outputReaderThread = startStreamReaderThread(process.getInputStream(), outputWriter);
+        Thread errorReaderThread = startStreamReaderThread(process.getErrorStream(), errorWriter);
+        process.waitFor();
+        outputReaderThread.join();
+        errorReaderThread.join();
+        /*
         ScriptingContainer container = new ScriptingContainer(LocalContextScope.SINGLETHREAD, LocalVariableBehavior.TRANSIENT);
         synchronized (this) {
           container.setEnvironment(environments);
@@ -115,6 +130,7 @@ public class SubmitJobRequestProcessor extends RequestProcessor<SubmitJobMessage
         } catch (Throwable e) {
           response.add(new ExceptionMessage(e.getMessage()));
         }
+         */
         directoryHash.save();
 
         JsonObject jsonObject = Json.parse(outputWriter.toString()).asObject();
@@ -157,5 +173,20 @@ public class SubmitJobRequestProcessor extends RequestProcessor<SubmitJobMessage
         }
       });
     }
+  }
+
+  private static Thread startStreamReaderThread(InputStream inputStream, StringWriter stringWriter) {
+    Thread thread = new Thread(() -> {
+      try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+          stringWriter.write(line);
+        }
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    });
+    thread.start();
+    return thread;
   }
 }

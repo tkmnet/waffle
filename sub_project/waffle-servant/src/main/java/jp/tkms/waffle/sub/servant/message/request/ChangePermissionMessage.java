@@ -6,12 +6,14 @@ import java.nio.file.Paths;
 public class ChangePermissionMessage extends AbstractRequestMessage {
   String path;
   String permission;
+  boolean isIgnoreDir;
 
   public ChangePermissionMessage() {}
 
-  public ChangePermissionMessage(Path path, String permission) {
+  public ChangePermissionMessage(Path path, String permission, boolean isIgnoreDir) {
     this.path = path.toString();
     this.permission = permission;
+    this.isIgnoreDir = isIgnoreDir;
   }
 
   public Path getPath() {
@@ -20,5 +22,9 @@ public class ChangePermissionMessage extends AbstractRequestMessage {
 
   public String getPermission() {
     return permission;
+  }
+
+  public boolean isIgnoreDir() {
+    return isIgnoreDir;
   }
 }

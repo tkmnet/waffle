@@ -12,12 +12,14 @@ import jp.tkms.waffle.data.project.workspace.archive.ArchivedConductor;
 import jp.tkms.waffle.data.project.workspace.archive.ArchivedExecutable;
 import jp.tkms.waffle.data.project.workspace.conductor.StagedConductor;
 import jp.tkms.waffle.data.util.*;
+import jp.tkms.waffle.exception.RunNotFoundException;
 import jp.tkms.waffle.manager.ManagerMaster;
 import jp.tkms.waffle.web.Key;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.UUID;
 
 public class ConductorRun extends AbstractRun implements DataDirectory {
@@ -26,6 +28,8 @@ public class ConductorRun extends AbstractRun implements DataDirectory {
   public static final String VARIABLES_JSON_FILE = "VARIABLES" + Constants.EXT_JSON;
   public static final String KEY_CONDUCTOR = "conductor";
   public static final String KEY_ACTIVE_RUN = "active_run";
+  public static final String KEY_STARTUP_VARIABLES = "startup_variables";
+  public static final String KEY_ACTIVE_EXECUTABLE_RUN = "active_executable_run";
   private static final String TRASHBIN_DIR = ".TRASH";
   private static final String ESCAPING_WAFFLE_WORKSPACE_NAME = "<#WAFFLE_WORKSPACE_NAME>";
   private static final String ESCAPING_WAFFLE_UUID = "<#WAFFLE_UUID>";
@@ -76,6 +80,7 @@ public class ConductorRun extends AbstractRun implements DataDirectory {
     setState(State.Running);
     if (conductor != null) {
       expandEscaping();
+      setToProperty(KEY_STARTUP_VARIABLES, getVariables());
       ProcedureRun procedureRun = ProcedureRun.create(this, conductor, Key.MAIN_PROCEDURE);
       procedureRun.start();
 
@@ -113,6 +118,10 @@ public class ConductorRun extends AbstractRun implements DataDirectory {
     }
 
     setState(nextState);
+  }
+
+  public WrappedJson getStartupVariables() {
+    return getObjectFromProperty(KEY_STARTUP_VARIABLES);
   }
 
   protected Path getVariablesStorePath() {
@@ -198,6 +207,11 @@ public class ConductorRun extends AbstractRun implements DataDirectory {
 
   public Object getVariable(String key) {
     return getVariables().get(key);
+  }
+
+  public String getVariableKey(String key) {
+    //return getLocalPath().toString() + RESULT_PATH_SEPARATOR + key;
+    return IndirectValue.getVariableIndirectValue(this, key).getKey();
   }
 
   void loadDefaultVariables() {
@@ -342,31 +356,66 @@ public class ConductorRun extends AbstractRun implements DataDirectory {
     putVariable(key, value);
   }
 
+  private static final Object lockerObject = new Object(); // TODO: fixit
+
   void registerChildRun(HasLocalPath run) {
-    if (getArrayFromProperty(KEY_ACTIVE_RUN) == null) {
-      putNewArrayToProperty(KEY_ACTIVE_RUN);
+    synchronized (lockerObject) {
+      if (getArrayFromProperty(KEY_ACTIVE_RUN) == null) {
+        putNewArrayToProperty(KEY_ACTIVE_RUN);
+      }
+      putToArrayOfProperty(KEY_ACTIVE_RUN, run.getLocalPath().toString());
+
+      // TODO: you should store the runs by an other method.
+      if (run instanceof ExecutableRun) {
+        if (getArrayFromProperty(KEY_ACTIVE_EXECUTABLE_RUN) == null) {
+          putNewArrayToProperty(KEY_ACTIVE_EXECUTABLE_RUN);
+        }
+        putToArrayOfProperty(KEY_ACTIVE_EXECUTABLE_RUN, run.getLocalPath().toString());
+      }
     }
-    putToArrayOfProperty(KEY_ACTIVE_RUN, run.getLocalPath().toString());
   }
 
-  private static final Object lockerObject = new Object(); // TODO: fixit
-  public void updateRunningStatus(HasLocalPath run) {
+  public void unregisterChildRun(HasLocalPath run) {
     synchronized (lockerObject) {
       if (getArrayFromProperty(KEY_ACTIVE_RUN) == null) {
         putNewArrayToProperty(KEY_ACTIVE_RUN);
       }
       removeFromArrayOfProperty(KEY_ACTIVE_RUN, run.getLocalPath().toString());
 
+      if (run instanceof ExecutableRun) {
+        if (getArrayFromProperty(KEY_ACTIVE_EXECUTABLE_RUN) == null) {
+          putNewArrayToProperty(KEY_ACTIVE_EXECUTABLE_RUN);
+        }
+        removeFromArrayOfProperty(KEY_ACTIVE_EXECUTABLE_RUN, run.getLocalPath().toString());
+      }
+
       updateRunningStatus();
     }
   }
 
-  public void updateRunningStatus() {
+  private void updateRunningStatus() {
     WrappedJsonArray jsonArray = getArrayFromProperty(KEY_ACTIVE_RUN, new WrappedJsonArray());
 
     if (jsonArray.isEmpty()) {
       finish(State.Finished);
     }
+  }
+
+  public ArrayList<ExecutableRun> getActiveExecutableRunList() {
+    ArrayList<ExecutableRun> list = new ArrayList<>();
+    synchronized (lockerObject) {
+      WrappedJsonArray array = getArrayFromProperty(KEY_ACTIVE_EXECUTABLE_RUN);
+      if (array != null) {
+        array.toJsonArray().forEach(v -> {
+          try {
+            list.add(ExecutableRun.getInstance(v.asString()));
+          } catch (RunNotFoundException e) {
+            WarnLogMessage.issue("RunNotFound at getActiveExecutableRunList: " + e);
+          }
+        });
+      }
+    }
+    return list;
   }
 
   Path getTrashBinPath() {

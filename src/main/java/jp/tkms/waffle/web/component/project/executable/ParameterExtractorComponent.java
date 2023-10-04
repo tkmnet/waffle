@@ -6,6 +6,7 @@ import jp.tkms.waffle.web.component.ResponseBuilder;
 import jp.tkms.waffle.web.component.project.ProjectComponent;
 import jp.tkms.waffle.web.component.project.ProjectsComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.ProjectMainTemplate;
 import jp.tkms.waffle.data.project.Project;
@@ -98,14 +99,14 @@ public class ParameterExtractorComponent extends AbstractAccessControlledCompone
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        ArrayList<String> breadcrumb = new ArrayList<String>(Arrays.asList(
-          ProjectsComponent.getAnchorLink(),
-          ProjectComponent.getAnchorLink(project),
-          ExecutablesComponent.getAnchorLink(project),
-          ExecutableComponent.getAnchorLink(executable),
-          "Extractor",
-          extractorName
+      protected ArrayList<Link> pageBreadcrumb() {
+        ArrayList<Link> breadcrumb = new ArrayList<>(Arrays.asList(
+          ProjectsComponent.getLink(),
+          ProjectComponent.getLink(project),
+          ExecutablesComponent.getLink(project),
+          ExecutableComponent.getLink(executable),
+          Link.entry("Extractor"),
+          Link.entry(extractorName)
         ));
         return breadcrumb;
       }
@@ -154,14 +155,14 @@ public class ParameterExtractorComponent extends AbstractAccessControlledCompone
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        ArrayList<String> breadcrumb = new ArrayList<String>(Arrays.asList(
-          ProjectsComponent.getAnchorLink(),
-          ProjectComponent.getAnchorLink(project),
-          ExecutablesComponent.getAnchorLink(project),
-          ExecutableComponent.getAnchorLink(executable),
-          "Extractor",
-          "Add"
+      protected ArrayList<Link> pageBreadcrumb() {
+        ArrayList<Link> breadcrumb = new ArrayList<>(Arrays.asList(
+          ProjectsComponent.getLink(),
+          ProjectComponent.getLink(project),
+          ExecutablesComponent.getLink(project),
+          ExecutableComponent.getLink(executable),
+          Link.entry("Extractor"),
+          Link.entry("Add")
         ));
         return breadcrumb;
       }

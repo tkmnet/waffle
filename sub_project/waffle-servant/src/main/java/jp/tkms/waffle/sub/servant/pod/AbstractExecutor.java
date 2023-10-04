@@ -37,28 +37,6 @@ public abstract class AbstractExecutor {
   private int timeout = 0;
   private int waitingTimeCounter = 0;
   private int marginTime = 0;
-  private Thread aliveNotifier = new Thread() {
-    @Override
-    public void run() {
-      try {
-        Files.createDirectories(ALIVE_NOTIFIER_PATH);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-      while (true) {
-        try {
-          sleep(1000);
-          try {
-            Files.writeString(UPDATE_FILE_PATH, String.valueOf(System.currentTimeMillis()));
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-        } catch (InterruptedException e) {
-          return;
-        }
-      }
-    }
-  };
 
   public static boolean isAlive(Path directory) {
     Path updateFile = directory.resolve(UPDATE_FILE_PATH);
@@ -110,7 +88,6 @@ public abstract class AbstractExecutor {
 
   public AbstractExecutor(int timeout, int marginTime) throws IOException {
     isAlive = true;
-    aliveNotifier.start();
     this.timeout = timeout;
     this.marginTime = marginTime;
     Files.createDirectories(JOBS_PATH);
@@ -162,18 +139,27 @@ public abstract class AbstractExecutor {
      */
     System.err.println("Executor started at " + System.currentTimeMillis());
 
+    try {
+      Files.createDirectories(ALIVE_NOTIFIER_PATH);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
     while (isAlive && waitingTimeCounter <= timeout) {
       boolean isChanged = false;
 
-      synchronized (runningJobList) {
+      try {
+        Files.writeString(UPDATE_FILE_PATH, String.valueOf(System.currentTimeMillis()));
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+
+      synchronized (objectLocker) {
         for (File file : JOBS_PATH.toFile().listFiles()) {
           if (!runningJobList.contains(file.getName())) {
             isChanged = true;
           }
         }
-      }
-
-      synchronized (runningJobList) {
         for (String id : runningJobList) {
           if (!JOBS_PATH.resolve(id).toFile().exists()) {
             isChanged = true;
@@ -185,7 +171,7 @@ public abstract class AbstractExecutor {
         checkJobs();
       }
 
-      synchronized (runningJobList) {
+      synchronized (objectLocker) {
         if (runningJobList.isEmpty()) {
           waitingTimeCounter += 1;
         } else {
@@ -250,12 +236,13 @@ public abstract class AbstractExecutor {
       } catch (InterruptedException e) {
         //NP
       }
+      checkJobs();
     }
 
     HashSet<String> temporaryJobList = new HashSet<>(runningJobList);
     for (String jobName : temporaryJobList) {
       if (Files.exists(JOBS_PATH.resolve(jobName))) {
-        synchronized (runningJobList) {
+        synchronized (objectLocker) {
           jobRemoved(jobName);
           runningJobList.remove(jobName);
         }
@@ -266,7 +253,6 @@ public abstract class AbstractExecutor {
       shutdownTimer.interrupt();
     }
 
-    aliveNotifier.interrupt();
     System.err.println("Executor shutdown at " + System.currentTimeMillis());
   }
 
@@ -275,15 +261,13 @@ public abstract class AbstractExecutor {
       HashSet<String> temporaryJobList = new HashSet<>(runningJobList);
       for (String jobName : temporaryJobList) {
         if (!Files.exists(JOBS_PATH.resolve(jobName))) {
-          synchronized (runningJobList) {
-            jobRemoved(jobName);
-            runningJobList.remove(jobName);
-          }
+          jobRemoved(jobName);
+          runningJobList.remove(jobName);
         }
       }
       for (File file : JOBS_PATH.toFile().listFiles()) {
         if (!runningJobList.contains(file.getName())) {
-          synchronized (runningJobList) {
+          if (Files.exists(ENTITIES_PATH.resolve(file.getName()))) {
             jobAdded(file.getName());
             runningJobList.add(file.getName());
           }
@@ -293,7 +277,7 @@ public abstract class AbstractExecutor {
   }
 
   private int getNextSlotIndex() {
-    synchronized (slotArray) {
+    synchronized (objectLocker) {
       int index = slotArray.indexOf(null);
       if (index == -1) {
         slotArray.add(null);
@@ -303,7 +287,7 @@ public abstract class AbstractExecutor {
   }
 
   private int getSlotIndex(String jobName) {
-    synchronized (slotArray) {
+    synchronized (objectLocker) {
       return slotArray.indexOf(jobName);
     }
   }
@@ -317,30 +301,24 @@ public abstract class AbstractExecutor {
 
   protected void jobRemoved(String jobName) {
     System.err.println("'" + jobName + "' was forcibly removed at " + System.currentTimeMillis());
-    synchronized (slotArray) {
+    synchronized (objectLocker) {
       slotArray.set(getSlotIndex(jobName), null);
       try {
-        synchronized (runningJobList) {
-          Files.deleteIfExists(ENTITIES_PATH.resolve(jobName));
-          Files.deleteIfExists(JOBS_PATH.resolve(jobName));
-        }
+        Files.deleteIfExists(ENTITIES_PATH.resolve(jobName));
+        Files.deleteIfExists(JOBS_PATH.resolve(jobName));
       } catch (IOException e) {
       }
     }
   }
 
   protected void jobFinished(String jobName) {
-    synchronized (slotArray) {
+    synchronized (objectLocker) {
       slotArray.set(getSlotIndex(jobName), null);
-      synchronized (objectLocker) {
-        synchronized (runningJobList) {
-          runningJobList.remove(jobName);
-          try {
-            Files.deleteIfExists(ENTITIES_PATH.resolve(jobName));
-            Files.deleteIfExists(JOBS_PATH.resolve(jobName));
-          } catch (IOException e) {
-          }
-        }
+      runningJobList.remove(jobName);
+      try {
+        Files.deleteIfExists(ENTITIES_PATH.resolve(jobName));
+        Files.deleteIfExists(JOBS_PATH.resolve(jobName));
+      } catch (IOException e) {
       }
     }
   }
@@ -372,37 +350,6 @@ public abstract class AbstractExecutor {
 
           process = new ProcessBuilder().directory(directoryPath.toFile())
             .command("sh", "-c", Constants.WAFFLE_SLOT_INDEX + "=" + slotIndex + " sh " + BATCH_FILE).inheritIO().start();
-            //.command("sh", "-c", Constants.WAFFLE_SLOT_INDEX + "=" + slotIndex + " sh " + BATCH_FILE).redirectErrorStream(true).start();
-
-          /*
-          Thread inputStreamThread = new Thread() {
-            boolean isAlive = true;
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-            @Override
-            public void run() {
-              try {
-                while (isAlive) {
-                  String line = reader.readLine();
-                  if (line == null) {
-                    isAlive = false;
-                  } else {
-                    System.err.println(line);
-                  }
-                }
-              } catch (IOException e) {
-                throw  new RuntimeException(e);
-              } finally {
-                try {
-                  reader.close();
-                } catch (IOException e) {
-                  e.printStackTrace();
-                }
-              }
-            }
-          };
-          inputStreamThread.start();
-           */
 
           process.waitFor();
         } catch (Exception e) {
@@ -412,7 +359,7 @@ public abstract class AbstractExecutor {
 
         jobFinished(jobName);
 
-        System.err.println("'" + jobName + "' finished at " + System.currentTimeMillis());
+        System.err.println("'" + jobName + "' was finished at " + System.currentTimeMillis());
       }
 
       @Override
@@ -420,7 +367,7 @@ public abstract class AbstractExecutor {
         isCanceled = true;
         if (process != null) {
           process.destroyForcibly();
-          System.err.println("'" + jobName + "' canceled at " + System.currentTimeMillis());
+          System.err.println("'" + jobName + "' was canceled at " + System.currentTimeMillis());
         }
       }
     };

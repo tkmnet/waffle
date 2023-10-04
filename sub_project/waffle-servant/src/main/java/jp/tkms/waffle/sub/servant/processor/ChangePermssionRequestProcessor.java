@@ -21,22 +21,24 @@ public class ChangePermssionRequestProcessor extends RequestProcessor<ChangePerm
     messageList.stream().parallel().forEach(message -> {
       try {
         Path path = baseDirectory.resolve(message.getPath());
-        changePermission(path, message.getPermission());
+        changePermission(path, message.getPermission(), message.isIgnoreDir());
       } catch (Exception e) {
         e.printStackTrace();
       }
     });
   }
 
-  protected static void changePermission(Path path, String permission) {
+  protected static void changePermission(Path path, String permission, boolean isIgnoreDir) {
     try {
-      Files.setPosixFilePermissions(path, toPermissionSet(path, permission));
+      if (!Files.isDirectory(path) || !isIgnoreDir) {
+        Files.setPosixFilePermissions(path, toPermissionSet(path, permission));
+      }
     } catch (IOException e) {
       e.printStackTrace();
     }
     if (Files.isDirectory(path)) {
       try (Stream<Path> stream = Files.list(path)) {
-        stream.forEach(p -> changePermission(p, permission));
+        stream.forEach(p -> changePermission(p, permission, isIgnoreDir));
       } catch (IOException e) {
         e.printStackTrace();
       }

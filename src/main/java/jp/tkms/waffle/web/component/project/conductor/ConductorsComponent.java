@@ -1,38 +1,26 @@
 package jp.tkms.waffle.web.component.project.conductor;
 
 import jp.tkms.waffle.Main;
-import jp.tkms.waffle.data.computer.Computer;
 import jp.tkms.waffle.data.project.Project;
 import jp.tkms.waffle.data.project.conductor.Conductor;
-import jp.tkms.waffle.data.project.executable.Executable;
-import jp.tkms.waffle.data.project.workspace.Workspace;
-import jp.tkms.waffle.data.project.workspace.run.ConductorRun;
-import jp.tkms.waffle.data.util.FileName;
-import jp.tkms.waffle.exception.ChildProcedureNotFoundException;
 import jp.tkms.waffle.exception.InvalidInputException;
 import jp.tkms.waffle.exception.ProjectNotFoundException;
 import jp.tkms.waffle.script.ScriptProcessor;
 import jp.tkms.waffle.web.Key;
 import jp.tkms.waffle.web.component.AbstractAccessControlledComponent;
 import jp.tkms.waffle.web.component.ResponseBuilder;
-import jp.tkms.waffle.web.component.log.LogsComponent;
 import jp.tkms.waffle.web.component.project.ProjectComponent;
 import jp.tkms.waffle.web.component.project.ProjectsComponent;
-import jp.tkms.waffle.web.component.project.workspace.WorkspaceComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.ProjectMainTemplate;
 import spark.Spark;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
-
-import static jp.tkms.waffle.web.template.Html.p;
-import static jp.tkms.waffle.web.template.Html.value;
 
 public class ConductorsComponent extends AbstractAccessControlledComponent {
   public static final String CONDUCTORS = "Conductors";
@@ -71,8 +59,8 @@ public class ConductorsComponent extends AbstractAccessControlledComponent {
     return ProjectComponent.getUrl(project) + "/" + Conductor.CONDUCTOR;
   }
 
-  public static String getAnchorLink(Project project) {
-    return Html.a(getUrl(project), CONDUCTORS);
+  public static Link getLink(Project project) {
+    return Link.entry(getUrl(project), CONDUCTORS);
   }
 
   public static String getUrl(Project project, Mode mode) {
@@ -109,11 +97,11 @@ public class ConductorsComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          ProjectsComponent.getAnchorLink(),
-          ProjectComponent.getAnchorLink(project),
-          CONDUCTORS
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          ProjectsComponent.getLink(),
+          ProjectComponent.getLink(project),
+          ConductorsComponent.getLink(project)
         ));
       }
 
@@ -151,7 +139,7 @@ public class ConductorsComponent extends AbstractAccessControlledComponent {
         for (Conductor conductor : Conductor.getList(project)) {
           list.add(Main.interfaceThreadPool.submit(() -> {
               Lte.TableRow row = new Lte.TableRow(
-                ConductorComponent.getAnchorLink(conductor),
+                ConductorComponent.getLink(conductor).toHtml(),
                 Html.sanitaize(conductor.getNote())
               );
               row.add(new Lte.TableValue("text-align:right;",
@@ -194,11 +182,12 @@ public class ConductorsComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          ProjectsComponent.getAnchorLink(),
-          Html.a(ProjectComponent.getUrl(project), project.getName()),
-          ConductorComponent.CONDUCTORS));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          ProjectsComponent.getLink(),
+          ProjectComponent.getLink(project),
+          ConductorsComponent.getLink(project),
+          Link.entry("(new)")));
       }
 
       @Override

@@ -5,6 +5,7 @@ import jp.tkms.waffle.Main;
 import jp.tkms.waffle.data.project.workspace.HasLocalPath;
 import jp.tkms.waffle.data.project.workspace.Workspace;
 import jp.tkms.waffle.data.project.workspace.run.*;
+import jp.tkms.waffle.data.util.WrappedJson;
 import jp.tkms.waffle.exception.RunNotFoundException;
 import jp.tkms.waffle.web.component.AbstractAccessControlledComponent;
 import jp.tkms.waffle.web.component.ResponseBuilder;
@@ -15,6 +16,7 @@ import jp.tkms.waffle.web.component.project.executable.ExecutableComponent;
 import jp.tkms.waffle.web.component.project.workspace.WorkspaceComponent;
 import jp.tkms.waffle.web.component.project.workspace.WorkspacesComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.ProjectMainTemplate;
 import jp.tkms.waffle.data.project.Project;
@@ -39,6 +41,7 @@ public class RunComponent extends AbstractAccessControlledComponent {
   private AbstractRun abstractRun;
   private ArrayList<HasLocalPath> childrenList = null;
   private String directoryName;
+  WrappedJson conductorStartupVariables = null;
 
   public enum Mode {Default, ReCheck, UpdateNote, Root, Abort, Cancel}
 
@@ -147,12 +150,18 @@ public class RunComponent extends AbstractAccessControlledComponent {
         return;
     }
 
-    childrenList = (abstractRun == null ? AbstractRun.getDirectoryList(workspace) : AbstractRun.getDirectoryList((ConductorRun)abstractRun));
     /*
     if (Paths.get(request.uri()).relativize(Paths.get(request.headers("Referer").replaceFirst("^.*?/PROJECT/", "/PROJECT/"))).toString().contains("..") && runList.size() == 1) {
       response.redirect(RunComponent.getUrl(runList.get(0)));
     }
      */
+    if (abstractRun == null) {
+      childrenList = AbstractRun.getDirectoryList(workspace);
+      conductorStartupVariables = ConductorRun.getInstance(workspace, RunComponent.getUrlFromPath(AbstractRun.getBaseDirectoryPath(workspace))).getStartupVariables();
+    } else {
+      childrenList = AbstractRun.getDirectoryList((ConductorRun)abstractRun);
+      conductorStartupVariables = ((ConductorRun) abstractRun).getStartupVariables();
+    }
 
     renderRuns();
   }
@@ -211,12 +220,12 @@ public class RunComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        ArrayList<String> breadcrumb = new ArrayList<String>(Arrays.asList(
-          Html.a(ProjectsComponent.getUrl(), "Projects"),
-          Html.a(ProjectComponent.getUrl(project), project.getName())
+      protected ArrayList<Link> pageBreadcrumb() {
+        ArrayList<Link> breadcrumb = new ArrayList<>(Arrays.asList(
+          Link.entry(ProjectsComponent.getUrl(), "Projects"),
+          Link.entry(ProjectComponent.getUrl(project), project.getName())
         ));
-        ArrayList<String> runNodeList = new ArrayList<>();
+        ArrayList<Link> runNodeList = new ArrayList<>();
         /*
         RunNode parent = runNode.getParent();
         if (parent == null) {
@@ -388,6 +397,16 @@ public class RunComponent extends AbstractAccessControlledComponent {
           })
           , null, null, "p-0");
          */
+        if (conductorStartupVariables != null) {
+          contents += Lte.card(Html.fasIcon("list-ol") + "Startup Variables",
+            Lte.cardToggleButton(false),
+            Lte.divRow(
+              Lte.divCol(Lte.DivSize.F12,
+                Lte.formJsonEditorGroup(ConductorRun.KEY_STARTUP_VARIABLES, null, "tree", conductorStartupVariables.toString(), null)
+              )
+            ), null,
+            "collapsed-card.stop card-secondary card-outline", null);
+        }
 
         return contents;
       }
@@ -417,14 +436,14 @@ public class RunComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        ArrayList<String> breadcrumb = new ArrayList<String>(Arrays.asList(
-          Html.a(ProjectsComponent.getUrl(), ProjectComponent.PROJECTS),
-          Html.a(ProjectComponent.getUrl(project), project.getName()),
-          Html.a(WorkspacesComponent.getUrl(project), WorkspaceComponent.WORKSPACES),
-          Html.a(WorkspaceComponent.getUrl(workspace), workspace.getName())
+      protected ArrayList<Link> pageBreadcrumb() {
+        ArrayList<Link> breadcrumb = new ArrayList<>(Arrays.asList(
+          Link.entry(ProjectsComponent.getUrl(), ProjectComponent.PROJECTS),
+          Link.entry(ProjectComponent.getUrl(project), project.getName()),
+          Link.entry(WorkspacesComponent.getUrl(project), WorkspaceComponent.WORKSPACES),
+          Link.entry(WorkspaceComponent.getUrl(workspace), workspace.getName())
         ));
-        ArrayList<String> runNodeList = new ArrayList<>();
+        ArrayList<Link> runNodeList = new ArrayList<>();
         /*
         RunNode parent = run.getRunNode().getParent();
         while (parent != null) {

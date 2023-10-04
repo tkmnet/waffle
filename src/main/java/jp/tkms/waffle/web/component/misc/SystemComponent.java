@@ -18,6 +18,7 @@ import jp.tkms.waffle.data.web.UserSession;
 import jp.tkms.waffle.web.component.AbstractAccessControlledComponent;
 import jp.tkms.waffle.web.component.ResponseBuilder;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.MainTemplate;
 import jp.tkms.waffle.script.ruby.util.RubyScript;
@@ -135,8 +136,8 @@ public class SystemComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList("System"));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(Link.entry("System")));
       }
 
       @Override
@@ -209,7 +210,7 @@ public class SystemComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
+      protected ArrayList<Link> pageBreadcrumb() {
         return new ArrayList<>();
       }
 

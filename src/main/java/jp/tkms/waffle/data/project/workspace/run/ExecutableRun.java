@@ -44,6 +44,7 @@ public class ExecutableRun extends AbstractRun implements DataDirectory, Compute
   protected static final String KEY_UPDATE_HANDLER = "update_handler";
   protected static final String KEY_FAILED_HANDLER = "failed_handler";
   private static final String KEY_PRIOR_RUN = "prior_run";
+  private static final String KEY_CANCELED = "canceled";
   protected static final String RESULT_PATH_SEPARATOR = ":";
 
   //private ProcedureRun parentRun = null;
@@ -348,10 +349,15 @@ public class ExecutableRun extends AbstractRun implements DataDirectory, Compute
         if (job != null) {
           job.cancel();
         }
+        setToProperty(KEY_CANCELED, true);
       } catch (RunNotFoundException e) {
         ErrorLogMessage.issue(e);
       }
     }
+  }
+
+  public boolean isCanceled() {
+    return getBooleanFromProperty(KEY_CANCELED, false);
   }
 
   public void appendErrorNote(String note) {

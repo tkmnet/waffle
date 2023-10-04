@@ -256,8 +256,8 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
     super.prepareJob(envelope, job);
 
     try {
-      ComputerTask run = job.getRun();
       if (computer.getParameters().keySet().contains(KEY_ADDITIONAL_PREPARE_COMMAND)) {
+        ComputerTask run = job.getRun();
         exec("cd '" + getRunDirectory(run) + "';" +computer.getParameter(KEY_ADDITIONAL_PREPARE_COMMAND));
         InfoLogMessage.issue("cd '" + getRunDirectory(run) + "';" +computer.getParameter(KEY_ADDITIONAL_PREPARE_COMMAND));
       }

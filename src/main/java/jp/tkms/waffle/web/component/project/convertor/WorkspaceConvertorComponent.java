@@ -7,7 +7,6 @@ import jp.tkms.waffle.data.project.Project;
 import jp.tkms.waffle.data.project.convertor.WorkspaceConvertor;
 import jp.tkms.waffle.data.project.workspace.Workspace;
 import jp.tkms.waffle.data.project.workspace.convertor.WorkspaceConvertorRun;
-import jp.tkms.waffle.data.project.workspace.run.ConductorRun;
 import jp.tkms.waffle.data.util.FileName;
 import jp.tkms.waffle.exception.ProjectNotFoundException;
 import jp.tkms.waffle.script.ScriptProcessor;
@@ -18,6 +17,7 @@ import jp.tkms.waffle.web.component.project.ProjectComponent;
 import jp.tkms.waffle.web.component.project.ProjectsComponent;
 import jp.tkms.waffle.web.component.project.workspace.WorkspaceComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.ProjectMainTemplate;
 import spark.Spark;
@@ -65,8 +65,8 @@ public class WorkspaceConvertorComponent extends AbstractAccessControlledCompone
       + "/" + Values.ifNull(convertor, ":" + KEY_CONVERTOR, ()->convertor.getName());
   }
 
-  public static String getAnchorLink(WorkspaceConvertor convertor) {
-    return Html.a(getUrl(convertor), convertor.getName());
+  public static Link getLink(WorkspaceConvertor convertor) {
+    return Link.entry(getUrl(convertor), convertor.getName());
   }
 
   public static String getUrl(WorkspaceConvertor convertor, Mode mode) {
@@ -127,12 +127,12 @@ public class WorkspaceConvertorComponent extends AbstractAccessControlledCompone
     return WORKSPACE_CONVERTOR;
   }
 
-  protected ArrayList<String> renderPageBreadcrumb() {
-    return new ArrayList<String>(Arrays.asList(
-      ProjectsComponent.getAnchorLink(),
-      ProjectComponent.getAnchorLink(project),
-      WORKSPACE_CONVERTORS,
-      Html.a(getUrl(convertor), convertor.getName())
+  protected ArrayList<Link> renderPageBreadcrumb() {
+    return new ArrayList<>(Arrays.asList(
+      ProjectsComponent.getLink(),
+      ProjectComponent.getLink(project),
+      Link.entry(WORKSPACE_CONVERTORS),
+      Link.entry(getUrl(convertor), convertor.getName())
     ));
   }
 
@@ -144,7 +144,7 @@ public class WorkspaceConvertorComponent extends AbstractAccessControlledCompone
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
+      protected ArrayList<Link> pageBreadcrumb() {
         return renderPageBreadcrumb();
       }
 
@@ -189,12 +189,12 @@ public class WorkspaceConvertorComponent extends AbstractAccessControlledCompone
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          ProjectsComponent.getAnchorLink(),
-          ProjectComponent.getAnchorLink(project),
-          WORKSPACE_CONVERTORS,
-          WorkspaceConvertorComponent.getAnchorLink(convertor)
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          ProjectsComponent.getLink(),
+          ProjectComponent.getLink(project),
+          Link.entry(WORKSPACE_CONVERTORS),
+          WorkspaceConvertorComponent.getLink(convertor)
         ));
       }
 

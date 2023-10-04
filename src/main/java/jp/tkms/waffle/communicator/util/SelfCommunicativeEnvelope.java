@@ -1,9 +1,11 @@
 package jp.tkms.waffle.communicator.util;
 
+import jp.tkms.waffle.Constants;
 import jp.tkms.waffle.communicator.AbstractSubmitter;
 import jp.tkms.waffle.communicator.process.RemoteProcess;
 import jp.tkms.waffle.data.log.message.ErrorLogMessage;
 import jp.tkms.waffle.data.log.message.InfoLogMessage;
+import jp.tkms.waffle.data.log.message.WarnLogMessage;
 import jp.tkms.waffle.sub.servant.Envelope;
 import jp.tkms.waffle.sub.servant.EnvelopeTransceiver;
 import jp.tkms.waffle.sub.servant.message.AbstractMessage;
@@ -45,12 +47,25 @@ public class SelfCommunicativeEnvelope extends Envelope {
     this.confirmPreparingMessageMap = new HashMap<>();
     this.remoteProcess = remoteProcess;
     this.transceiver = new EnvelopeTransceiver(baseDirectory, remoteProcess.getOutputStream(), remoteProcess.getInputStream(),
+      (isUpload, path) ->{
+        InfoLogMessage.issue("Transfer large size files (This process needs few minute)");
+        try {
+          if (isUpload) {
+            submitter.transferFilesToRemote(Constants.WORK_DIR.resolve(path), submitter.getAbsolutePath(path));
+          } else {
+            submitter.transferFilesFromRemote(submitter.getAbsolutePath(path), Constants.WORK_DIR.resolve(path));
+          }
+        } catch (Exception e) {
+          WarnLogMessage.issue(e);
+        }
+        InfoLogMessage.issue("Finished the transferring process");
+      },
       ((transceiver, envelope) -> {
         submitter.processResponse(envelope);
         if (additionalEnvelopeConsumer != null) {
           additionalEnvelopeConsumer.accept(envelope);
         }
-      }));
+      }), (t) -> {});
     autoFlusher.start();
   }
 

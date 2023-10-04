@@ -50,7 +50,7 @@ public class TaskExecutor extends TaskCommand {
     timeout = taskJson.getTimeout();
     execKey = taskJson.getExecKey();
 
-    pid = Long.valueOf(java.lang.management.ManagementFactory.getRuntimeMXBean().getName().split("@")[0]);
+    pid = ProcessHandle.current().pid();//Long.valueOf(java.lang.management.ManagementFactory.getRuntimeMXBean().getName().split("@")[0]);
   }
 
   private void setPid(long pid) {

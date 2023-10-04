@@ -49,6 +49,12 @@ public class SubmitPodTaskRequestProcessor extends RequestProcessor<SubmitPodTas
       }
 
       if (!Files.exists(podPath.resolve(AbstractExecutor.UPDATE_FILE_PATH)) || Files.exists(podPath.resolve(AbstractExecutor.LOCKOUT_FILE_PATH))) {
+        Path lostFlagPath = workingDirectory.resolve(CheckJobIdRequestProcessor.LOST_JOBID_FLAG);
+        try {
+          Files.deleteIfExists(lostFlagPath);
+        } catch (IOException e) {
+          //NOP
+        }
         response.add(new PodTaskRefusedMessage(message.getJobId()));
         return;
       }

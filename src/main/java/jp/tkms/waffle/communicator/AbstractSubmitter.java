@@ -4,6 +4,7 @@ import com.eclipsesource.json.JsonArray;
 import com.eclipsesource.json.JsonValue;
 import jp.tkms.utils.abbreviation.Simple;
 import jp.tkms.utils.concurrent.LockByKey;
+import jp.tkms.utils.debug.DebugElapsedTime;
 import jp.tkms.waffle.Constants;
 import jp.tkms.waffle.communicator.annotation.CommunicatorDescription;
 import jp.tkms.waffle.communicator.process.RemoteProcess;
@@ -30,14 +31,13 @@ import jp.tkms.waffle.sub.servant.Envelope;
 import jp.tkms.waffle.sub.servant.ExecKey;
 import jp.tkms.waffle.sub.servant.TaskJson;
 import jp.tkms.waffle.sub.servant.message.request.*;
+import org.jruby.ir.instructions.BFalseInstr;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
@@ -49,7 +49,7 @@ abstract public class AbstractSubmitter {
   protected static final String RUN_DIR = "run";
   protected static final String BATCH_FILE = "batch.sh";
   public static final String XSUB_TYPE = "XSUB_TYPE";
-  static final int INITIAL_PREPARING = 100;
+  static final int INITIAL_PREPARING = 16384;
   static final int TIMEOUT = 120000; // 2min
   public static final String KEY_NAME = "name";
   public static final String KEY_LABEL = "label";
@@ -77,6 +77,7 @@ abstract public class AbstractSubmitter {
   private boolean isClosed = false;
   protected SelfCommunicativeEnvelope selfCommunicativeEnvelope = null;
   private AtomicLong remoteSyncedTime = new AtomicLong(-1);
+  private Map<Path, Long> existFileMap = new HashMap<>();
 
   private static Path tempDirectoryPath = null;
 
@@ -154,6 +155,32 @@ abstract public class AbstractSubmitter {
 
       isClosed = true;
     }
+  }
+
+  public boolean exists(Path path, boolean useCache) throws FailedToControlRemoteException {
+    boolean res;
+    Long prevRef;
+    if (!useCache || null == (prevRef = existFileMap.get(path)) || prevRef < System.currentTimeMillis() - 2000) {
+       res = exists(path);
+    } else {
+       res = true;
+    }
+    if (res) {
+      existFileMap.put(path, System.currentTimeMillis());
+    } else {
+      existFileMap.remove(path);
+    }
+
+    ArrayList<Path> removeList = new ArrayList<>();
+    Long outedTime = System.currentTimeMillis() - 2000;
+    for (Map.Entry<Path, Long> entry : existFileMap.entrySet()) {
+      if (entry.getValue() < outedTime) {
+        removeList.add(entry.getKey());
+      }
+    }
+    removeList.forEach(p -> existFileMap.remove(p));
+
+    return res;
   }
 
   protected void switchToStreamMode() {
@@ -354,7 +381,7 @@ abstract public class AbstractSubmitter {
         String workspaceName = (run instanceof ExecutableRun ? ((ExecutableRun)run).getWorkspace().getName() : ".SYSTEM_TASK");
         String executableName = (run instanceof ExecutableRun ? ((ExecutableRun)run).getExecutable().getName() : ".SYSTEM_TASK");
 
-        run.specializedPreProcess(this);
+        run.specializedPreProcess(this); // for fail-safe
 
         JsonArray arguments = new JsonArray();
         for (Object object : run.getArguments()) {
@@ -394,9 +421,9 @@ abstract public class AbstractSubmitter {
         synchronized (envelope) {
           Path binPath = run.getBinPath();
           if (binPath != null && !envelope.exists(binPath)) {
-            if (remoteExecutableBaseDirectory != null && !exists(remoteExecutableBaseDirectory.toAbsolutePath())) {
+            if (remoteExecutableBaseDirectory != null && !exists(remoteExecutableBaseDirectory.toAbsolutePath(), true)) {
               envelope.add(binPath);
-              envelope.add(new ChangePermissionMessage(remoteExecutableBaseDirectory.resolve(Executable.BASE), "a-w"));
+              envelope.add(new ChangePermissionMessage(remoteExecutableBaseDirectory.resolve(Executable.BASE), "a-w", true));
             }
           }
         }
@@ -824,6 +851,20 @@ abstract public class AbstractSubmitter {
     int nextPreparing = INITIAL_PREPARING - preparedJobList.size();
     int triedCount = 0;
     ArrayList<AbstractTask> queuedJobList = new ArrayList<>(createdJobList);
+
+    queuedJobList.stream().parallel().forEach(job -> {
+      synchronized (job) {
+        try {
+          if (job.getState().equals(State.Created)) {
+            ComputerTask run = job.getRun();
+            run.specializedPreProcess(this);
+          }
+        } catch (RunNotFoundException e) {
+          WarnLogMessage.issue(e);
+        }
+      }
+    });
+
     for (AbstractTask job : queuedJobList) {
       if (Main.hibernatingFlag || isBroken) { return true; }
       if (triedCount >= nextPreparing ) { return true; }

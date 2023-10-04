@@ -174,6 +174,16 @@ public class Envelope {
     return envelope;
   }
 
+  public long getFileSize() {
+    Set<Path> sourceSet = new LinkedHashSet<>();
+    for (Path filePath : filePathList) {
+      if (Files.exists(baseDirectory.resolve(filePath))) {
+        addPathsToSet(sourceSet, filePath);
+      }
+    }
+    return sourceSet.stream().mapToLong(path -> getFileSize(path)).sum();
+  }
+
   private static void deleteFiles(Path path) {
     if (Files.isDirectory(path)) {
       try (Stream<Path> files = Files.list(path)) {
@@ -208,6 +218,23 @@ public class Envelope {
     } else {
       //TODO: handling symbolic link
       set.add(path.normalize());
+    }
+  }
+
+  private long getFileSize(Path file) {
+    Path path = baseDirectory.resolve(file);
+    if (Files.isDirectory(path)) {
+      try (Stream<Path> files = Files.list(path)) {
+        return files.mapToLong(p -> getFileSize(p)).sum();
+      } catch (IOException e) {
+        return 0;
+      }
+    } else {
+      try {
+        return Files.size(path);
+      } catch (IOException e) {
+        return 0;
+      }
     }
   }
 

@@ -89,7 +89,7 @@ public class Manager {
 
       ConductorRun parentConductorRun = run.getParentConductorRun();
       if (parentConductorRun != null) {
-        parentConductorRun.updateRunningStatus((HasLocalPath) run);;
+        parentConductorRun.unregisterChildRun((HasLocalPath) run);;
       }
     }
   }

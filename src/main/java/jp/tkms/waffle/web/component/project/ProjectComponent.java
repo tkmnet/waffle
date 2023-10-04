@@ -1,19 +1,16 @@
 package jp.tkms.waffle.web.component.project;
 
-import jp.tkms.waffle.Main;
 import jp.tkms.waffle.data.project.conductor.Conductor;
-import jp.tkms.waffle.data.project.convertor.WorkspaceConvertor;
-import jp.tkms.waffle.exception.InvalidInputException;
 import jp.tkms.waffle.web.component.*;
 import jp.tkms.waffle.web.component.project.conductor.ConductorComponent;
 import jp.tkms.waffle.web.component.project.conductor.ConductorsComponent;
 import jp.tkms.waffle.web.component.project.convertor.WorkspaceConvertorComponent;
 import jp.tkms.waffle.web.component.project.convertor.WorkspaceConvertorsComponent;
-import jp.tkms.waffle.web.component.project.executable.ExecutableComponent;
 import jp.tkms.waffle.web.component.project.executable.ExecutablesComponent;
 import jp.tkms.waffle.web.component.project.workspace.WorkspaceComponent;
 import jp.tkms.waffle.web.component.project.workspace.WorkspacesComponent;
 import jp.tkms.waffle.web.template.Html;
+import jp.tkms.waffle.web.template.Link;
 import jp.tkms.waffle.web.template.Lte;
 import jp.tkms.waffle.web.template.ProjectMainTemplate;
 import jp.tkms.waffle.data.project.Project;
@@ -23,9 +20,6 @@ import spark.Spark;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.Future;
-
-import static jp.tkms.waffle.web.template.Html.*;
 
 public class ProjectComponent extends AbstractAccessControlledComponent {
   public static final String TITLE = "Project";
@@ -61,8 +55,8 @@ public class ProjectComponent extends AbstractAccessControlledComponent {
     return "/" + Project.PROJECT + "/" + (project == null ? ':' + KEY_PROJECT : project.getName());
   }
 
-  public static String getAnchorLink(Project project) {
-    return Html.a(getUrl(project), project.getName());
+  public static Link getLink(Project project) {
+    return Link.entry(getUrl(project), Html.fasIcon("folder-open") + project.getName());
   }
 
   public static String getUrl(Project project, Mode mode) {
@@ -102,9 +96,10 @@ public class ProjectComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          Html.a(ProjectsComponent.getUrl(), "Projects"), "NotFound"));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          Link.entry(ProjectsComponent.getUrl(), "Projects"),
+          Link.entry("NotFound")));
       }
 
       @Override
@@ -126,9 +121,12 @@ public class ProjectComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          Html.a(ProjectsComponent.getUrl(), "Projects")));
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          null,
+          ProjectsComponent.getLink(),
+          ProjectComponent.getLink(project)
+          ));
       }
 
       @Override

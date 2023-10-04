@@ -85,7 +85,7 @@ public class DirectoryHash {
           collectDirectoryStatusTo(fileSet, p);
         } else if (!p.toFile().getName().equals(HASH_FILE) && !p.toFile().getName().endsWith(IGNORE_FLAG)) {
           try {
-            fileSet.add(baseDirectory.relativize(p).normalize().toString() + SEPARATOR + Files.size(p));
+            fileSet.add(p.getFileName().toString() + SEPARATOR + Files.size(p));
           } catch (IOException e) {
             e.printStackTrace();
           }

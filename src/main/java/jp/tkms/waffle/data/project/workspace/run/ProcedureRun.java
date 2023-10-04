@@ -589,6 +589,10 @@ public class ProcedureRun extends AbstractRun {
     transactionRunList.clear();
   }
 
+  public ArrayList<ExecutableRun> getActiveExecutableRunList() {
+    return getParentConductorRun().getActiveExecutableRunList();
+  }
+
   public void putVariables(WrappedJson valueMap) {
     getParentConductorRun().putVariables(valueMap);
   }
@@ -607,6 +611,10 @@ public class ProcedureRun extends AbstractRun {
 
   public Object getVariable(String key) {
     return getParentConductorRun().getVariable(key);
+  }
+
+  public String getVariableKey(String key) {
+    return getParentConductorRun().getVariableKey(key);
   }
 
   /*

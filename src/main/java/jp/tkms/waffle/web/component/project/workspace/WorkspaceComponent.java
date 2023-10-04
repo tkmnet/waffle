@@ -6,6 +6,8 @@ package jp.tkms.waffle.web.component.project.workspace;
   import jp.tkms.waffle.data.project.workspace.conductor.StagedConductor;
   import jp.tkms.waffle.data.project.workspace.executable.StagedExecutable;
   import jp.tkms.waffle.data.project.workspace.run.AbstractRun;
+  import jp.tkms.waffle.data.project.workspace.run.ConductorRun;
+  import jp.tkms.waffle.data.util.WrappedJson;
   import jp.tkms.waffle.web.component.AbstractAccessControlledComponent;
   import jp.tkms.waffle.web.component.ResponseBuilder;
   import jp.tkms.waffle.web.component.project.ProjectComponent;
@@ -16,6 +18,7 @@ package jp.tkms.waffle.web.component.project.workspace;
   import jp.tkms.waffle.web.component.project.workspace.executable.StagedExecutableComponent;
   import jp.tkms.waffle.web.component.project.workspace.run.RunComponent;
   import jp.tkms.waffle.web.template.Html;
+  import jp.tkms.waffle.web.template.Link;
   import jp.tkms.waffle.web.template.Lte;
   import jp.tkms.waffle.web.template.ProjectMainTemplate;
   import jp.tkms.waffle.data.project.Project;
@@ -55,6 +58,10 @@ public class WorkspaceComponent extends AbstractAccessControlledComponent {
     RunComponent.register();
     StagedExecutableComponent.register();
     StagedConductorComponent.register();
+  }
+
+  public static Link getLink(Workspace workspace) {
+    return Link.entry(getUrl(workspace), Html.fasIcon("table") + workspace.getName());
   }
 
   public static String getUrl(Workspace workspace) {
@@ -103,11 +110,12 @@ public class WorkspaceComponent extends AbstractAccessControlledComponent {
       }
 
       @Override
-      protected ArrayList<String> pageBreadcrumb() {
-        return new ArrayList<String>(Arrays.asList(
-          Html.a(ProjectsComponent.getUrl(), "Projects"),
-          Html.a(ProjectComponent.getUrl(project), project.getName()),
-          Html.a(WorkspacesComponent.getUrl(project), WORKSPACES)
+      protected ArrayList<Link> pageBreadcrumb() {
+        return new ArrayList<>(Arrays.asList(
+          ProjectsComponent.getLink(),
+          ProjectComponent.getLink(project),
+          WorkspacesComponent.getLink(project),
+          WorkspaceComponent.getLink(workspace)
         ));
       }
 
@@ -224,6 +232,18 @@ public class WorkspaceComponent extends AbstractAccessControlledComponent {
             }
           })
           , null, "card-outline", "p-0");
+
+        WrappedJson conductorStartupVariables = ConductorRun.getInstance(workspace, RunComponent.getUrlFromPath(AbstractRun.getBaseDirectoryPath(workspace))).getStartupVariables();
+        if (conductorStartupVariables != null) {
+          contents += Lte.card(Html.fasIcon("list-ol") + "Startup Variables",
+            Lte.cardToggleButton(false),
+            Lte.divRow(
+              Lte.divCol(Lte.DivSize.F12,
+                Lte.formJsonEditorGroup(ConductorRun.KEY_STARTUP_VARIABLES, null, "tree", conductorStartupVariables.toString(), null)
+              )
+            ), null,
+            "collapsed-card.stop card-secondary card-outline", null);
+        }
 
         String scriptLog = workspace.getScriptOutput();
         contents += Lte.divRow(
