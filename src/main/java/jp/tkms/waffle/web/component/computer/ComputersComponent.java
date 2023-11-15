@@ -27,6 +27,7 @@ public class ComputersComponent extends AbstractAccessControlledComponent {
   private static final String KEY_WORKBASE = "work_base_dir";
   private static final String KEY_JVM_ACTIVATION_COMMAND = "jvm_activation_command";
   private static final String KEY_POLLING = "polling_interval";
+  private static final String KEY_XSUB_TYPE = "xsub_type";
   private static final String KEY_MAX_THREADS = "maximum_threads";
   private static final String KEY_ALLOCABLE_MEMORY = "allocable_memory";
   private static final String KEY_NUMBER_OF_CALCULATION_NODE = "number_of_calculation_node";
@@ -266,7 +267,8 @@ public class ComputersComponent extends AbstractAccessControlledComponent {
             computer.getState().getStatusBadge(),
             Html.div(null,
               Lte.formTextAreaGroup(KEY_NOTE, "Note", computer.getNote(), null),
-              Lte.readonlyTextInput("Submitter Type", computer.getSubmitterType()),
+              Lte.readonlyTextInput("Submitter type", computer.getSubmitterType()),
+              Lte.formSelectGroup(KEY_XSUB_TYPE, "Computer's scheduler type", getXsubOptionsList(computer), errors),
               Lte.formInputGroup("text", KEY_WORKBASE,
                 "Work base directory on the computer", "", computer.getWorkBaseDirectory(), errors),
               Lte.formInputGroup("text", KEY_JVM_ACTIVATION_COMMAND,
@@ -291,7 +293,18 @@ public class ComputersComponent extends AbstractAccessControlledComponent {
     }.render(this);
   }
 
+  private List<String> getXsubOptionsList(Computer computer) {
+    ArrayList<String> list = new ArrayList<>();
+    String current = computer.getXsubType();
+    list.add(current);
+    for (String option  : Computer.getXsubOptions()) {
+      if (!current.equals(option)) { list.add(option); }
+    }
+    return list;
+  }
+
   private void updateComputer() {
+    computer.setXsubType(request.queryParams(KEY_XSUB_TYPE));
     computer.setWorkBaseDirectory(request.queryParams(KEY_WORKBASE));
     computer.setJvmActivationCommand(request.queryParams(KEY_JVM_ACTIVATION_COMMAND));
     computer.setMaximumNumberOfThreads(Double.parseDouble(request.queryParams(KEY_MAX_THREADS)));

@@ -230,7 +230,8 @@ abstract public class AbstractSubmitter {
 
   private static String getServantCommand(AbstractSubmitter submitter, Path remoteEnvelopePath) throws FailedToControlRemoteException {
     int timeout = submitter.getComputer().getPollingInterval() * 10;
-    return "sh '" + submitter.getAbsolutePath(submitter.getServantScript().getScriptPath()) + "' main '" + (remoteEnvelopePath == null ? "-" : remoteEnvelopePath) + "' " + timeout;
+    String xsubType = submitter.getComputer().getXsubType();
+    return "sh -c \"XSUB_TYPE='" + xsubType + "' sh '" + submitter.getAbsolutePath(submitter.getServantScript().getScriptPath()) + "' main '" + (remoteEnvelopePath == null ? "-" : remoteEnvelopePath) + "' " + timeout + "\"";
   }
 
   protected static Envelope sendAndReceiveEnvelope(AbstractSubmitter submitter, Envelope envelope) throws Exception {
@@ -631,7 +632,6 @@ abstract public class AbstractSubmitter {
 
       startupPreparingProcessorManager();
       startupSubmittingProcessorManager();
-      startupFinishedProcessorManager();
 
       ArrayList<AbstractTask> submittedJobList = new ArrayList<>();
       ArrayList<AbstractTask> runningJobList = new ArrayList<>();
@@ -682,7 +682,8 @@ abstract public class AbstractSubmitter {
       if (!isBroken) {
         processRequestAndResponse(envelope);
       }
-      return;
+
+      startupFinishedProcessorManager();
     } catch (FailedToControlRemoteException e) {
       isRunning = false;
       throw e;

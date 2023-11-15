@@ -23,6 +23,7 @@ public class UpdateXsubTemplateMessageProcessor extends ResponseProcessor<Update
       target.setParameters(target.getParameters());
       target.setState(ComputerState.Viable);
       target.setMessage("");
+      Computer.updateXsubOptions(message.getOptions());
     }
   }
 }

@@ -1,5 +1,6 @@
 package jp.tkms.waffle.data.computer;
 
+import com.eclipsesource.json.JsonValue;
 import jp.tkms.waffle.Constants;
 import jp.tkms.waffle.data.HasNote;
 import jp.tkms.waffle.data.util.*;
@@ -24,7 +25,7 @@ import java.util.*;
 public class Computer implements DataDirectory, PropertyFile, HasNote {
   private static final String KEY_LOCAL = "LOCAL";
   private static final String KEY_WORKBASE = "work_base_dir";
-  //private static final String KEY_XSUB = "xsub_dir";
+  private static final String KEY_XSUB_TYPE = "xsub_type";
   private static final String KEY_XSUB_TEMPLATE = "xsub_template";
   private static final String KEY_POLLING = "polling_interval";
   private static final String KEY_MAX_THREADS = "maximum_threads";
@@ -36,6 +37,8 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
   private static final String KEY_MESSAGE = "message";
   private static final String KEY_JVM_ACTIVATION_COMMAND = "jvm_activation_commnad";
   private static final String KEY_PARAMETERS_JSON = "PARAMETERS" + Constants.EXT_JSON;
+
+  private static Set<String> xsubOptions = new HashSet<>();
 
   private static final InstanceCache<String, Computer> instanceCache = new InstanceCache<>();
 
@@ -81,6 +84,29 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
         reloadPropertyStore();
       }
     });
+  }
+
+  public static void updateXsubOptions(String options) {
+    try {
+      WrappedJsonArray array = new WrappedJsonArray(options);
+      for (JsonValue v : array.toJsonArray()) {
+        xsubOptions.add(v.asString());
+      }
+    } catch (Exception e) {
+      WarnLogMessage.issue(e);
+    }
+  }
+
+  public static List<String> getXsubOptions() {
+    return new ArrayList<>(xsubOptions);
+  }
+
+  public String getXsubType() {
+    return getStringFromProperty(KEY_XSUB_TYPE, "None");
+  }
+
+  public void setXsubType(String type) {
+    setToProperty(KEY_XSUB_TYPE, type);
   }
 
   @Override
@@ -562,16 +588,21 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
   public static void initializeWorkDirectory() {
     Data.initializeWorkDirectory();
     if (! Files.exists(getBaseDirectoryPath().resolve(KEY_LOCAL))) {
-      Computer computer = create(KEY_LOCAL, JobNumberLimitedLocalSubmitter.class.getCanonicalName());
+      Computer local = create(KEY_LOCAL, JobNumberLimitedLocalSubmitter.class.getCanonicalName());
       Path localWorkBaseDirectoryPath = Paths.get(".").toAbsolutePath().relativize(Constants.WORK_DIR.resolve(KEY_LOCAL));
       try {
         Files.createDirectories(localWorkBaseDirectoryPath);
       } catch (IOException e) {
         ErrorLogMessage.issue(e);
       }
-      computer.setWorkBaseDirectory(localWorkBaseDirectoryPath.toString());
-      computer.update();
-      InfoLogMessage.issue(computer, "was added automatically");
+      local.setWorkBaseDirectory(localWorkBaseDirectoryPath.toString());
+      local.update();
+      InfoLogMessage.issue(local, "was added automatically");
+    }
+
+    if (xsubOptions.isEmpty()) {
+      Computer local = getInstance(KEY_LOCAL);
+      local.update();
     }
   }
 }

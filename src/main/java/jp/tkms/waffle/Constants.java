@@ -32,6 +32,7 @@ public class Constants {
   public static final Path UUID_FILE = WORK_DIR.resolve(DOT_INTERNAL).resolve("UUID");
   public static final long HUGE_FILE_SIZE = 1048576;
   public static final int COMMUNICATION_TIMEOUT = 15000;
+  public static final int TIME_LIMIT_OF_STREAM_MODE_SERVANT = 300000;
   public static final String WAFFLE_OPEN_COMMAND = "WAFFLE_OPEN_COMMAND";
   public static final Path AUTO_START_FILE = Constants.WORK_DIR.resolve(Constants.DOT_INTERNAL).resolve("AUTO_START");
   public static final Path REMOVE_JAR_FILE = Constants.WORK_DIR.resolve(Constants.DOT_INTERNAL).resolve("REMOVE_JAR");

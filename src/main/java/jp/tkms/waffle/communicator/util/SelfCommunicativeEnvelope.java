@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 public class SelfCommunicativeEnvelope extends Envelope {
@@ -25,6 +26,7 @@ public class SelfCommunicativeEnvelope extends Envelope {
 
   Object messageLocker = new Object();
   Object fileLocker = new Object();
+  long lastBootTime;
 
   AtomicInteger entryCounter = new AtomicInteger(0);
   Thread autoFlusher = new Thread() {
@@ -43,9 +45,10 @@ public class SelfCommunicativeEnvelope extends Envelope {
 
   public SelfCommunicativeEnvelope(Path baseDirectory, RemoteProcess remoteProcess, AbstractSubmitter submitter) {
     super(baseDirectory);
+    this.lastBootTime = System.currentTimeMillis();
     this.confirmPreparingMessageMap = new HashMap<>();
     this.remoteProcess = remoteProcess;
-    this.transceiver = new EnvelopeTransceiver(baseDirectory, remoteProcess.getOutputStream(), remoteProcess.getInputStream(),
+    this.transceiver = new EnvelopeTransceiver(baseDirectory, false, remoteProcess.getOutputStream(), remoteProcess.getInputStream(),
       (isUpload, path) ->{
         InfoLogMessage.issue("Transfer large size files (This process needs few minute)");
         try {
@@ -80,7 +83,7 @@ public class SelfCommunicativeEnvelope extends Envelope {
     autoFlusher.interrupt();
     flush();
     try {
-      transceiver.shutdown();
+      transceiver.shutdown(false);
       transceiver.waitForShutdown();
     } catch (IOException e) {
       ErrorLogMessage.issue(e);
@@ -114,12 +117,25 @@ public class SelfCommunicativeEnvelope extends Envelope {
     }
   }
 
+  private void tryShortBreak() {
+    if (this.lastBootTime + Constants.TIME_LIMIT_OF_STREAM_MODE_SERVANT < System.currentTimeMillis()) {
+      try {
+        transceiver.requestReboot();
+        transceiver.sync(Constants.COMMUNICATION_TIMEOUT);
+        this.lastBootTime = System.currentTimeMillis();
+      } catch (Exception e) {
+        WarnLogMessage.issue(e);
+      }
+    }
+  }
+
   private void send(boolean isAuto) {
     synchronized (messageLocker) {
       synchronized (fileLocker) {
         if (!remoteProcess.isClosed()) {
           try {
             transceiver.send(getRawEnvelope());
+            tryShortBreak();
           } catch (Exception e) {
             entryCounter.set(0);
             close();

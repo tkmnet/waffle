@@ -18,6 +18,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class Main {
   public  static AtomicLong lastUpdatedTime = new AtomicLong(System.currentTimeMillis());
+  public static String KEY_REBOOTKEY = "WAFFLE_REBOOTKEY";
+  public static boolean isRebootable = System.getenv(KEY_REBOOTKEY) != null;
 
   public static void updateTimestamp(long time) {
     lastUpdatedTime.set(time);
@@ -69,7 +71,7 @@ public class Main {
           updateTimestamp();
           timeoutThread.start();
 
-          EnvelopeTransceiver transceiver = new EnvelopeTransceiver(baseDirectory, System.out, System.in, null,
+          EnvelopeTransceiver transceiver = new EnvelopeTransceiver(baseDirectory, isRebootable, System.out, System.in, null,
             (me, request) -> {
               try {
                 Main.updateTimestamp();
