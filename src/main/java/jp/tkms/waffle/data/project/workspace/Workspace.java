@@ -1,11 +1,13 @@
 package jp.tkms.waffle.data.project.workspace;
 
+import jp.tkms.utils.file.UpdatableLogFile;
 import jp.tkms.waffle.Constants;
 import jp.tkms.waffle.data.DataDirectory;
 import jp.tkms.waffle.data.HasNote;
 import jp.tkms.waffle.data.PropertyFile;
 import jp.tkms.waffle.data.internal.task.ExecutableRunTask;
 import jp.tkms.waffle.data.log.message.ErrorLogMessage;
+import jp.tkms.waffle.data.log.message.WarnLogMessage;
 import jp.tkms.waffle.data.project.Project;
 import jp.tkms.waffle.data.project.ProjectData;
 import jp.tkms.waffle.data.project.workspace.run.AbstractRun;
@@ -28,16 +30,20 @@ public class Workspace extends ProjectData implements DataDirectory, PropertyFil
   public static final String ARCHIVE = ".ARCHIVE";
   public static final String SCRIPT_OUTPUT_FILE = "SCRIPT_OUTPUT.txt";
   public static final String KEY_EXECUTABLE_LOCK = "executable_lock#";
+  private static final String KEY_STARTED_AT = "started_at";
   private static final String KEY_FINISHED = "finished";
   private static final Pattern PATH_RESOLVER = Pattern.compile("^"+ Project.PROJECT + "/(.+)/" + WORKSPACE + "/([^/]+)");
 
   private static final InstanceCache<String, Workspace> instanceCache = new InstanceCache<>();
 
   private String name = null;
+  private Path recordPath;
+  private long startedAt = -1;
 
   public Workspace(Project project, String name) {
     super(project);
     this.name = name;
+    this.recordPath = getPath().resolve("RECORD.csv");
     instanceCache.put(getBaseDirectoryPath(project).resolve(name).toString(), this);
     initialise();
   }
@@ -125,6 +131,13 @@ public class Workspace extends ProjectData implements DataDirectory, PropertyFil
     }
   }
 
+  public long getStartedAt() {
+    if (startedAt < 0) {
+      startedAt = getLongFromProperty(KEY_STARTED_AT, DateTime.getCurrentEpoch());
+    }
+    return startedAt;
+  }
+
   public String getScriptOutput() {
     return getFileContents(SCRIPT_OUTPUT_FILE);
   }
@@ -172,7 +185,32 @@ public class Workspace extends ProjectData implements DataDirectory, PropertyFil
     }
   }
 
-  public void recordChildStatus(State state) {
+  public void recordChildStatus(State state, int delta) {
+    // LOCALTIME, CREATED, RUNNING, FINISHED, FAILED
+    int mode = 1;
+    if (state.equals(State.Running)) {
+      mode = 2;
+    } else if (state.equals(State.Finished)) {
+      mode = 3;
+    } else if (state.equals(State.Failed)) {
+      mode = 4;
+    }
 
+    try (UpdatableLogFile file = new UpdatableLogFile(recordPath)) {
+      String line = file.getLastLine();
+      if (line.equals("")) {
+        line = "0,0,0,0,0";
+        file.updateLastLine(line);
+      }
+      String entries[] = line.split(",");
+      long localTime = DateTime.getCurrentEpoch() - getStartedAt();
+      if (localTime >= 0 && !entries[0].equals(String.valueOf(localTime))) {
+
+      } else {
+
+      }
+    } catch (Exception e) {
+      WarnLogMessage.issue(e);
+    }
   }
 }
