@@ -9,6 +9,7 @@ import jp.tkms.waffle.data.log.message.WarnLogMessage;
 import jp.tkms.waffle.sub.servant.Envelope;
 import jp.tkms.waffle.sub.servant.EnvelopeTransceiver;
 import jp.tkms.waffle.sub.servant.message.AbstractMessage;
+import net.schmizz.sshj.connection.ConnectionException;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -85,6 +86,8 @@ public class SelfCommunicativeEnvelope extends Envelope {
     try {
       transceiver.shutdown(false);
       transceiver.waitForShutdown();
+    } catch (ConnectionException e) {
+      InfoLogMessage.issue("Stream connection failed");
     } catch (IOException e) {
       ErrorLogMessage.issue(e);
     }

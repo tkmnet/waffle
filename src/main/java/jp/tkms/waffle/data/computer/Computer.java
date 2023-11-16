@@ -1,6 +1,7 @@
 package jp.tkms.waffle.data.computer;
 
 import com.eclipsesource.json.JsonValue;
+import jp.tkms.utils.concurrent.LockByKey;
 import jp.tkms.waffle.Constants;
 import jp.tkms.waffle.data.HasNote;
 import jp.tkms.waffle.data.util.*;
@@ -14,6 +15,8 @@ import jp.tkms.waffle.data.log.message.ErrorLogMessage;
 import jp.tkms.waffle.data.log.message.InfoLogMessage;
 import jp.tkms.waffle.data.log.message.WarnLogMessage;
 import jp.tkms.waffle.communicator.*;
+import jp.tkms.waffle.web.template.Lte;
+import net.schmizz.sshj.connection.ConnectionException;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
@@ -21,26 +24,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Computer implements DataDirectory, PropertyFile, HasNote {
   private static final String KEY_LOCAL = "LOCAL";
-  private static final String KEY_WORKBASE = "work_base_dir";
-  private static final String KEY_XSUB_TYPE = "xsub_type";
   private static final String KEY_XSUB_TEMPLATE = "xsub_template";
-  private static final String KEY_POLLING = "polling_interval";
-  private static final String KEY_MAX_THREADS = "maximum_threads";
-  private static final String KEY_ALLOCABLE_MEMORY = "allocable_memory";
-  private static final String KEY_MAX_JOBS = "maximum_jobs";
   private static final String KEY_TYPE = "type";
   private static final String KEY_STATE = "state";
   private static final String KEY_ENVIRONMENTS = "environments";
   private static final String KEY_MESSAGE = "message";
-  private static final String KEY_JVM_ACTIVATION_COMMAND = "jvm_activation_commnad";
   private static final String KEY_PARAMETERS_JSON = "PARAMETERS" + Constants.EXT_JSON;
 
   private static Set<String> xsubOptions = new HashSet<>();
 
   private static final InstanceCache<String, Computer> instanceCache = new InstanceCache<>();
+
+  private static boolean isUpdatingXsubOptions = false;
 
   public static final ArrayList<Class<AbstractSubmitter>> submitterTypeList = new ArrayList(Arrays.asList(
     JobNumberLimitedSshSubmitter.class,
@@ -55,13 +54,6 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
 
   private String name;
   private String submitterType = null;
-  private String workBaseDirectory = null;
-  private String jvmActivationCommand = null;
-  private SecretKeySpec encryptKey = null;
-  private Integer pollingInterval = null;
-  private Double maximumNumberOfThreads = null;
-  private Double allocableMemorySize = null;
-  private Integer maximumNumberOfJobs = null;
   private WrappedJson parameters = null;
   private WrappedJson xsubTemplate = null;
 
@@ -74,11 +66,6 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
     Main.registerFileChangeEventListener(getBaseDirectoryPath().resolve(name), () -> {
       synchronized (this) {
         submitterType = null;
-        workBaseDirectory = null;
-        pollingInterval = null;
-        maximumNumberOfThreads = null;
-        allocableMemorySize = null;
-        maximumNumberOfJobs = null;
         parameters = null;
         xsubTemplate = null;
         reloadPropertyStore();
@@ -101,14 +88,6 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
     return new ArrayList<>(xsubOptions);
   }
 
-  public String getXsubType() {
-    return getStringFromProperty(KEY_XSUB_TYPE, "None");
-  }
-
-  public void setXsubType(String type) {
-    setToProperty(KEY_XSUB_TYPE, type);
-  }
-
   @Override
   public boolean equals(Object o) {
     if (o instanceof Computer) {
@@ -123,11 +102,13 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
 
   public static Computer getInstance(String name) {
     if (name != null && !name.equals("") && Files.exists(getBaseDirectoryPath().resolve(name))) {
-      Computer computer = instanceCache.get(name);
-      if (computer == null) {
-        computer = new Computer(name);
+      try (LockByKey lock = LockByKey.acquire(Computer.class.getCanonicalName() + name)) {
+        Computer computer = instanceCache.get(name);
+        if (computer == null) {
+          computer = new Computer(name);
+        }
+        return computer;
       }
-      return computer;
     }
     return null;
   }
@@ -156,12 +137,6 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
     initializeWorkDirectory();
 
     if (getState() == null) { setState(ComputerState.Unviable); }
-    //if (getXsubDirectory() == null) { setXsubDirectory(""); }
-    if (getWorkBaseDirectory() == null) { setWorkBaseDirectory("/tmp/waffle"); }
-    if (getMaximumNumberOfThreads() == null) { setMaximumNumberOfThreads(1.0); }
-    if (getAllocableMemorySize() == null) { setAllocableMemorySize(1.0); }
-    if (getPollingInterval() == null) { setPollingInterval(10); }
-    if (getMaximumNumberOfJobs() == null) { setMaximumNumberOfJobs(1); }
   }
 
   public static ArrayList<Computer> getViableList() {
@@ -183,10 +158,14 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
 
     Computer computer = getInstance(name);
     if (computer == null) {
-      computer = new Computer(name);
+      try (LockByKey lock = LockByKey.acquire(Computer.class.getCanonicalName() + name)) {
+        computer = instanceCache.get(name);
+        if (computer == null) {
+          computer = new Computer(name);
+        }
+      }
     }
     computer.setSubmitterType(submitterClassName);
-
     return computer;
   }
 
@@ -196,10 +175,11 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
 
   public void update() {
     try {
+      setMessage("");
       AbstractSubmitter.checkWaffleServant(this, false);
       AbstractSubmitter.updateXsubTemplate(this, false);
     } catch (RuntimeException | WaffleException e) {
-      e.printStackTrace();
+      //e.printStackTrace();
       String message = e.getMessage();
       if (message != null) {
         if (message.startsWith("java.io.FileNotFoundException: ")) {
@@ -277,138 +257,6 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
     }
   }
 
-  public String getWorkBaseDirectory() {
-    synchronized (this) {
-      if (workBaseDirectory == null) {
-        workBaseDirectory = getStringFromProperty(KEY_WORKBASE);
-      }
-      return workBaseDirectory;
-    }
-  }
-
-  public void setWorkBaseDirectory(String workBaseDirectory) {
-    synchronized (this) {
-      setToProperty(KEY_WORKBASE, workBaseDirectory);
-      this.workBaseDirectory = workBaseDirectory;
-    }
-  }
-
-  /*
-  public String getXsubDirectory() {
-    synchronized (this) {
-      if (xsubDirectory == null) {
-        xsubDirectory = getStringFromProperty(KEY_XSUB);
-      }
-      return xsubDirectory;
-    }
-  }
-
-  public void setXsubDirectory(String xsubDirectory) {
-    synchronized (this) {
-      setToProperty(KEY_XSUB, xsubDirectory);
-      this.xsubDirectory = xsubDirectory;
-    }
-  }
-   */
-
-
-  /*
-  public String getOs() {
-    if (os == null) {
-      os = getStringFromDB(KEY_OS);
-    }
-    return os;
-  }
-
-  public String getDirectorySeparetor() {
-    String directorySeparetor = "/";
-    if (getOs().equals("U")) {
-      directorySeparetor = "/";
-    }
-    return directorySeparetor;
-  }
-   */
-
-  public String getJvmActivationCommand() {
-    synchronized (this) {
-      if (jvmActivationCommand == null) {
-        jvmActivationCommand = getStringFromProperty(KEY_JVM_ACTIVATION_COMMAND, "");
-      }
-    }
-    return jvmActivationCommand;
-  }
-
-  public void setJvmActivationCommand(String jvmActivationCommand) {
-    synchronized (this) {
-      setToProperty(KEY_JVM_ACTIVATION_COMMAND, jvmActivationCommand);
-      this.jvmActivationCommand = jvmActivationCommand;
-    }
-  }
-
-  public Integer getPollingInterval() {
-    synchronized (this) {
-      if (pollingInterval == null) {
-        pollingInterval = getIntFromProperty(KEY_POLLING);
-      }
-      return pollingInterval;
-    }
-  }
-
-  public void setPollingInterval(Integer pollingInterval) {
-    synchronized (this) {
-      setToProperty(KEY_POLLING, pollingInterval);
-      this.pollingInterval = pollingInterval;
-    }
-  }
-
-  public Double getMaximumNumberOfThreads() {
-    synchronized (this) {
-      if (maximumNumberOfThreads == null) {
-        maximumNumberOfThreads = getDoubleFromProperty(KEY_MAX_THREADS);
-      }
-      return maximumNumberOfThreads;
-    }
-  }
-
-  public void setMaximumNumberOfThreads(Double maximumNumberOfThreads) {
-    synchronized (this) {
-      setToProperty(KEY_MAX_THREADS, maximumNumberOfThreads);
-      this.maximumNumberOfThreads = maximumNumberOfThreads;
-    }
-  }
-
-  public Double getAllocableMemorySize() {
-    synchronized (this) {
-      if (allocableMemorySize == null) {
-        allocableMemorySize = getDoubleFromProperty(KEY_ALLOCABLE_MEMORY);
-      }
-      return allocableMemorySize;
-    }
-  }
-
-  public void setAllocableMemorySize(Double allocableMemorySize) {
-    synchronized (this) {
-      setToProperty(KEY_ALLOCABLE_MEMORY, allocableMemorySize);
-      this.allocableMemorySize = allocableMemorySize;
-    }
-  }
-
-  public Integer getMaximumNumberOfJobs() {
-    synchronized (this) {
-      if (maximumNumberOfJobs == null) {
-        maximumNumberOfJobs = getIntFromProperty(KEY_MAX_JOBS);
-      }
-      return maximumNumberOfJobs;
-    }
-  }
-
-  public void setMaximumNumberOfJobs(Integer maximumNumberOfJobs) {
-    synchronized (this) {
-      setToProperty(KEY_MAX_JOBS, maximumNumberOfJobs);
-      this.maximumNumberOfJobs = maximumNumberOfJobs;
-    }
-  }
-
   public WrappedJson getXsubParameters() {
     WrappedJson jsonObject = new WrappedJson();
     for (Object key : getXsubParametersTemplate().keySet()) {
@@ -468,8 +316,32 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
     }
   }
 
+  public Object getParameter(String key, AbstractSubmitter submitter) {
+    JsonValue value = getParameters().toJsonObject().get(key);
+    if (value == null || value.isNull()) {
+      value = getJsonValueFromProperty(key);
+    }
+    if (value == null || value.isNull()) {
+      for (JsonValue jsonValue : submitter.getFormSettings().toJsonArray()) {
+        WrappedJson entry = new WrappedJson(jsonValue.asObject());
+        String name = entry.getString(AbstractSubmitter.KEY_NAME, "_" + System.nanoTime());
+        if (name.equals(key)) {
+          value = entry.toJsonObject().get(AbstractSubmitter.KEY_DEFAULT);
+          if (value != null) {
+            setParameter(name, value);
+          }
+          break;
+        }
+      }
+    }
+    if (value != null && value.isString()) {
+      return value.asString();
+    }
+    return value;
+  }
+
   public Object getParameter(String key) {
-    return getParameters().get(key);
+    return getParameter(key, AbstractSubmitter.getInstance(Inspector.Mode.Normal, this));
   }
 
   public void setParameters(WrappedJson jsonObject) {
@@ -595,14 +467,14 @@ public class Computer implements DataDirectory, PropertyFile, HasNote {
       } catch (IOException e) {
         ErrorLogMessage.issue(e);
       }
-      local.setWorkBaseDirectory(localWorkBaseDirectoryPath.toString());
+      local.setParameter(AbstractSubmitter.KEY_WORKBASE, localWorkBaseDirectoryPath.toString());
       local.update();
       InfoLogMessage.issue(local, "was added automatically");
-    }
-
-    if (xsubOptions.isEmpty()) {
-      Computer local = getInstance(KEY_LOCAL);
+    } else if (!isUpdatingXsubOptions && xsubOptions.isEmpty()) {
+      isUpdatingXsubOptions = true;
+      Computer local = Computer.getInstance(KEY_LOCAL);
       local.update();
+      isUpdatingXsubOptions = false;
     }
   }
 }

@@ -1,5 +1,6 @@
 package jp.tkms.waffle.communicator;
 
+import com.eclipsesource.json.JsonValue;
 import jp.tkms.waffle.communicator.annotation.CommunicatorDescription;
 import jp.tkms.waffle.data.util.WrappedJsonArray;
 import jp.tkms.waffle.inspector.Inspector;
@@ -58,9 +59,27 @@ public class LoadBalancingSubmitter extends MultiComputerSubmitter {
 
   @Override
   public boolean processPreparing(Envelope envelope, ArrayList<AbstractTask> createdJobList, ArrayList<AbstractTask> preparedJobList) throws FailedToControlRemoteException {
-    double globalFreeThread = computer.getMaximumNumberOfThreads();
-    double globalFreeMemory = computer.getAllocableMemorySize();
-    int globalFreeJobSlot = computer.getMaximumNumberOfJobs();
+    double globalFreeThread = 0.0;
+    {
+      JsonValue jsonValue = (JsonValue) computer.getParameter(KEY_MAX_THREADS, this);
+      if (jsonValue.isNumber()) {
+        globalFreeThread = jsonValue.asDouble();
+      }
+    }
+
+    double globalFreeMemory = 0.0;
+    {
+      JsonValue jsonValue = (JsonValue) computer.getParameter(KEY_ALLOCABLE_MEMORY, this);
+      if (jsonValue.isNumber()) {
+        globalFreeMemory = jsonValue.asDouble();
+      }
+    }
+
+    int globalFreeJobSlot = 0;
+    JsonValue jsonValue = (JsonValue) computer.getParameter(KEY_MAX_JOBS, this);
+    if (jsonValue.isNumber()) {
+      globalFreeJobSlot = jsonValue.asInt();
+    }
 
     ArrayList<Computer> passableComputerList = new ArrayList<>();
     WrappedJsonArray targetComputers = computer.getParameters().getArray(KEY_TARGET_COMPUTERS, null);

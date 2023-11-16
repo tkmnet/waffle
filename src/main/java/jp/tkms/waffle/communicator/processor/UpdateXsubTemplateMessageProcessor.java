@@ -6,6 +6,7 @@ import jp.tkms.waffle.data.computer.Computer;
 import jp.tkms.waffle.data.log.message.ErrorLogMessage;
 import jp.tkms.waffle.data.util.ComputerState;
 import jp.tkms.waffle.data.util.WrappedJson;
+import jp.tkms.waffle.data.util.WrappedJsonArray;
 import jp.tkms.waffle.sub.servant.Envelope;
 import jp.tkms.waffle.sub.servant.message.response.ExceptionMessage;
 import jp.tkms.waffle.sub.servant.message.response.UpdateXsubTemplateMessage;

@@ -51,7 +51,7 @@ public class ServantScript {
       writeln(writer, "cd \"$WAFFLE_SERVANT_SCRIPT_WORKDIR\"");
       writeln(writer, "WAFFLE_JAVA=\"$WAFFLE_SERVANT_SCRIPT_DIR/waffle-servant-jre/bin/java\"");
       writeln(writer, "WAFFLE_MINISERVANT=\"$WAFFLE_SERVANT_SCRIPT_DIR/waffle-servant-jre/bin/miniservant\"");
-      writeln(writer, computer.getJvmActivationCommand());
+      //writeln(writer, computer.getJvmActivationCommand());
       writeln(writer, "if [ \"$1\" = \"exec\" ];then");
       writeln(writer, "MINIOUT=$(\"$WAFFLE_MINISERVANT\" \"$WAFFLE_SERVANT_SCRIPT_BASEDIR\" exec \"$2\" 2>&1)");
       writeln(writer, "EC=$?");

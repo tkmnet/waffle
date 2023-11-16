@@ -1,5 +1,6 @@
 package jp.tkms.waffle.communicator;
 
+import com.eclipsesource.json.JsonValue;
 import jp.tkms.waffle.communicator.annotation.CommunicatorDescription;
 import jp.tkms.waffle.communicator.process.RemoteProcess;
 import jp.tkms.waffle.data.util.WrappedJson;
@@ -31,6 +32,39 @@ public class MultiComputerSubmitter extends AbstractSubmitterWrapper {
   @Override
   public AbstractSubmitter connect(boolean retry) {
     return this;
+  }
+
+  @Override
+  public WrappedJsonArray getFormSettings() {
+    WrappedJsonArray settings = super.getFormSettings();
+    {
+      WrappedJson entry = new WrappedJson();
+      entry.put(KEY_NAME, KEY_MAX_JOBS);
+      entry.put(KEY_LABEL, "Maximum number of jobs");
+      entry.put(KEY_TYPE, "number");
+      entry.put(KEY_CAST, "Integer");
+      entry.put(KEY_DEFAULT, 1);
+      settings.add(entry);
+    }
+    {
+      WrappedJson entry = new WrappedJson();
+      entry.put(KEY_NAME, KEY_MAX_THREADS);
+      entry.put(KEY_LABEL, "Maximum number of threads");
+      entry.put(KEY_TYPE, "text");
+      entry.put(KEY_CAST, "Double");
+      entry.put(KEY_DEFAULT, 1.0);
+      settings.add(entry);
+    }
+    {
+      WrappedJson entry = new WrappedJson();
+      entry.put(KEY_NAME, KEY_ALLOCABLE_MEMORY);
+      entry.put(KEY_LABEL, "Allocable memory size (GB)");
+      entry.put(KEY_TYPE, "text");
+      entry.put(KEY_CAST, "Double");
+      entry.put(KEY_DEFAULT, 1.0);
+      settings.add(entry);
+    }
+    return settings;
   }
 
   @Override
@@ -135,10 +169,27 @@ public class MultiComputerSubmitter extends AbstractSubmitterWrapper {
 
   @Override
   public boolean processPreparing(Envelope envelope, ArrayList<AbstractTask> createdJobList, ArrayList<AbstractTask> preparedJobList) throws FailedToControlRemoteException {
+    double globalFreeThread = 0.0;
+    {
+      JsonValue jsonValue = (JsonValue) computer.getParameter(KEY_MAX_THREADS, this);
+      if (jsonValue.isNumber()) {
+        globalFreeThread = jsonValue.asDouble();
+      }
+    }
 
-    double globalFreeThread = computer.getMaximumNumberOfThreads();
-    double globalFreeMemory = computer.getAllocableMemorySize();
-    int globalFreeJobSlot = computer.getMaximumNumberOfJobs();
+    double globalFreeMemory = 0.0;
+    {
+      JsonValue jsonValue = (JsonValue) computer.getParameter(KEY_ALLOCABLE_MEMORY, this);
+      if (jsonValue.isNumber()) {
+        globalFreeMemory = jsonValue.asDouble();
+      }
+    }
+
+    int globalFreeJobSlot = 0;
+    JsonValue jsonValue = (JsonValue) computer.getParameter(KEY_MAX_JOBS, this);
+    if (jsonValue.isNumber()) {
+      globalFreeJobSlot = jsonValue.asInt();
+    }
 
     /* Check global acceptability */
     ArrayList<Computer> passableComputerList = new ArrayList<>();

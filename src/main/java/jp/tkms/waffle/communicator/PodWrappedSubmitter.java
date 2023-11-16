@@ -1,5 +1,6 @@
 package jp.tkms.waffle.communicator;
 
+import com.eclipsesource.json.JsonValue;
 import jp.tkms.utils.concurrent.LockByKey;
 import jp.tkms.waffle.Constants;
 import jp.tkms.waffle.communicator.annotation.CommunicatorDescription;
@@ -74,6 +75,39 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
       return false;
     }
     return true;
+  }
+
+  @Override
+  public WrappedJsonArray getFormSettings() {
+    WrappedJsonArray settings = super.getFormSettings();
+    {
+      WrappedJson entry = new WrappedJson();
+      entry.put(KEY_NAME, KEY_MAX_JOBS);
+      entry.put(KEY_LABEL, "Maximum number of jobs (Number of pods)");
+      entry.put(KEY_TYPE, "number");
+      entry.put(KEY_CAST, "Integer");
+      entry.put(KEY_DEFAULT, 1);
+      settings.add(entry);
+    }
+    {
+      WrappedJson entry = new WrappedJson();
+      entry.put(KEY_NAME, KEY_MAX_THREADS);
+      entry.put(KEY_LABEL, "Maximum number of threads (per a pod)");
+      entry.put(KEY_TYPE, "text");
+      entry.put(KEY_CAST, "Double");
+      entry.put(KEY_DEFAULT, 1.0);
+      settings.add(entry);
+    }
+    {
+      WrappedJson entry = new WrappedJson();
+      entry.put(KEY_NAME, KEY_ALLOCABLE_MEMORY);
+      entry.put(KEY_LABEL, "Allocable memory size [GB] (per a pod)");
+      entry.put(KEY_TYPE, "text");
+      entry.put(KEY_CAST, "Double");
+      entry.put(KEY_DEFAULT, 1.0);
+      settings.add(entry);
+    }
+    return settings;
   }
 
   @Override
@@ -336,10 +370,26 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
 
     public VirtualJobExecutor getNextExecutor(AbstractTask next) throws RunNotFoundException {
       synchronized (runningExecutorList) {
+        double globalFreeThread = 0.0;
+        {
+          JsonValue jsonValue = (JsonValue) getComputer().getParameter(KEY_MAX_THREADS, submitter);
+          if (jsonValue.isNumber()) {
+            globalFreeThread = jsonValue.asDouble();
+          }
+        }
+
+        double globalFreeMemory = 0.0;
+        {
+          JsonValue jsonValue = (JsonValue) getComputer().getParameter(KEY_ALLOCABLE_MEMORY, submitter);
+          if (jsonValue.isNumber()) {
+            globalFreeMemory = jsonValue.asDouble();
+          }
+        }
+
         Submittable submittable = getSubmittable(next.getRun());
         VirtualJobExecutor result = submittable.usableExecutor;
         if (result == null && submittable.isNewExecutorCreatable) {
-          SystemTask executorJob = SystemTask.addRun(VirtualJobExecutor.create(this, getComputer().getMaximumNumberOfThreads(), getComputer().getAllocableMemorySize(),
+          SystemTask executorJob = SystemTask.addRun(VirtualJobExecutor.create(this, globalFreeThread, globalFreeMemory,
             true,
             Integer.parseInt(submitter.computer.getParameter(KEY_EMPTY_TIMEOUT).toString()),
             Integer.parseInt(submitter.computer.getParameter(KEY_FORCE_SHUTDOWN).toString()),
@@ -363,6 +413,22 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
 
     protected Submittable getSubmittable(ComputerTask next) {
       synchronized (runningExecutorList) {
+        double globalFreeThread = 0.0;
+        {
+          JsonValue jsonValue = (JsonValue) getComputer().getParameter(KEY_MAX_THREADS, submitter);
+          if (jsonValue.isNumber()) {
+            globalFreeThread = jsonValue.asDouble();
+          }
+        }
+
+        double globalFreeMemory = 0.0;
+        {
+          JsonValue jsonValue = (JsonValue) getComputer().getParameter(KEY_ALLOCABLE_MEMORY, submitter);
+          if (jsonValue.isNumber()) {
+            globalFreeMemory = jsonValue.asDouble();
+          }
+        }
+
         double threadSize = (next == null ? 0 : next.getRequiredThread());
         double memorySize = (next == null ? 0 : next.getRequiredMemory());
 
@@ -403,8 +469,8 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
             usedThread += abstractTask.getRequiredThread();
             usedMemory += abstractTask.getRequiredMemory();
           }
-          if (threadSize <= (getComputer().getMaximumNumberOfThreads() - usedThread)
-            && memorySize <= (getComputer().getAllocableMemorySize() - usedMemory)) {
+          if (threadSize <= (globalFreeThread - usedThread)
+            && memorySize <= (globalFreeMemory - usedMemory)) {
             if (executor.isAcceptable()) {
               result.usableExecutor = executor;
               submittableCache = executor;
@@ -417,7 +483,7 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
 
         result.targetComputer = Computer.getInstance(getComputer().getParameters().getString(KEY_TARGET_COMPUTER, ""));
         if (result.targetComputer != null) {
-          VirtualJobExecutor executor = VirtualJobExecutor.create(this, getComputer().getMaximumNumberOfThreads(), getComputer().getAllocableMemorySize(), true, 0, 0, 0);
+          VirtualJobExecutor executor = VirtualJobExecutor.create(this, globalFreeThread, globalFreeMemory, true, 0, 0, 0);
           AbstractSubmitter targetSubmitter = AbstractSubmitter.getInstance(Inspector.Mode.Normal, result.targetComputer);
           result.isNewExecutorCreatable = targetSubmitter.isSubmittable(result.targetComputer, executor);
           executor.deleteDirectory();
@@ -435,6 +501,22 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
 
     public boolean isReceptacle(ComputerTask next, ArrayList<ComputerTask> list) {
       synchronized (runningExecutorList) {
+        double globalFreeThread = 0.0;
+        {
+          JsonValue jsonValue = (JsonValue) getComputer().getParameter(KEY_MAX_THREADS, submitter);
+          if (jsonValue.isNumber()) {
+            globalFreeThread = jsonValue.asDouble();
+          }
+        }
+
+        double globalFreeMemory = 0.0;
+        {
+          JsonValue jsonValue = (JsonValue) getComputer().getParameter(KEY_ALLOCABLE_MEMORY, submitter);
+          if (jsonValue.isNumber()) {
+            globalFreeMemory = jsonValue.asDouble();
+          }
+        }
+
         for (VirtualJobExecutor executor : new ArrayList<>(runningExecutorList.values())) {
           Path directoryPath = executor.getPath();
           if (!directoryPath.toFile().exists() || !executor.isRunning()) {
@@ -484,8 +566,8 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
             double threadSize = (next == null ? 0 : next.getRequiredThread());
             double memorySize = (next == null ? 0 : next.getRequiredMemory());
 
-            if (threadSize <= (getComputer().getMaximumNumberOfThreads() - usedThread)
-              && memorySize <= (getComputer().getAllocableMemorySize() - usedMemory)) {
+            if (threadSize <= (globalFreeThread - usedThread)
+              && memorySize <= (globalFreeMemory - usedMemory)) {
               if (queuedList.size() <= 1) {
                 return true;
               } else {
@@ -497,7 +579,12 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
           }
         }
 
-        for (int count = 0; count < getComputer().getMaximumNumberOfJobs() - runningExecutorList.size(); count += 1) {
+        int globalFreeJobSlot = 0;
+        JsonValue jsonValue = (JsonValue) getComputer().getParameter(KEY_MAX_JOBS, submitter);
+        if (jsonValue.isNumber()) {
+          globalFreeJobSlot = jsonValue.asInt();
+        }
+        for (int count = 0; count < globalFreeJobSlot - runningExecutorList.size(); count += 1) {
           double usedThread = 0.0;
           double usedMemory = 0.0;
 
@@ -505,8 +592,8 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
             double threadSize = (next == null ? 0 : next.getRequiredThread());
             double memorySize = (next == null ? 0 : next.getRequiredMemory());
 
-            if (threadSize <= (getComputer().getMaximumNumberOfThreads() - usedThread)
-              && memorySize <= (getComputer().getAllocableMemorySize() - usedMemory)) {
+            if (threadSize <= (globalFreeThread - usedThread)
+              && memorySize <= (globalFreeMemory - usedMemory)) {
               if (queuedList.size() <= 1) {
                 return true;
               } else {
@@ -838,10 +925,12 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
      */
   }
 
+  /*
   @Override
   public String getJvmActivationCommand() {
     return targetSubmitter.getJvmActivationCommand();
   }
+   */
 
   @Override
   public AbstractSubmitter connect(boolean retry) {
@@ -869,7 +958,7 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
 
   @Override
   public Path getAbsolutePath(Path path) throws FailedToControlRemoteException {
-    return targetSubmitter.parseHomePath(targetSubmitter.computer.getWorkBaseDirectory()).resolve(path);
+    return targetSubmitter.getWorkBaseDirectory().resolve(path);
   }
 
   @Override

@@ -1,5 +1,6 @@
 package jp.tkms.waffle.data;
 
+import com.eclipsesource.json.JsonValue;
 import jp.tkms.utils.concurrent.LockByKey;
 import jp.tkms.waffle.Constants;
 import jp.tkms.waffle.data.log.message.WarnLogMessage;
@@ -145,6 +146,12 @@ public interface PropertyFile {
         value = defaultValue;
       }
       return value;
+    }
+  }
+
+  default JsonValue getJsonValueFromProperty(String key) {
+    try (LockByKey lock = LockByKey.acquire(getAbsolutePropertyStorePath())) {
+      return getPropertyStore().toJsonObject().get(key);
     }
   }
 
