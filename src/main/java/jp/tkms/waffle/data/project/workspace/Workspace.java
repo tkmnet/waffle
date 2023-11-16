@@ -171,4 +171,8 @@ public class Workspace extends ProjectData implements DataDirectory, PropertyFil
       }
     }
   }
+
+  public void recordChildStatus(State state) {
+
+  }
 }
