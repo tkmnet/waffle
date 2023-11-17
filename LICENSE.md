@@ -128,6 +128,9 @@ https://github.com/vsch/flexmark-java/blob/master/LICENSE.txt
 ## Tabler Icons
 MIT
 https://github.com/tabler/tabler-icons/blob/master/LICENSE
+## Chart.js
+MIT
+https://github.com/chartjs/Chart.js/blob/master/LICENSE.md
 
 # Included libraries for Software Building
 ## Gradle

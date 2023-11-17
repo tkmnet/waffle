@@ -46,6 +46,8 @@ public class ExecutableRun extends AbstractRun implements DataDirectory, Compute
   private static final String KEY_PRIOR_RUN = "prior_run";
   private static final String KEY_CANCELED = "canceled";
   protected static final String RESULT_PATH_SEPARATOR = ":";
+  private static final String KEY_FIRST_SUBMIT_PROCESSED = "first_submit";
+  private static final String KEY_FIRST_EXCEPTED_PROCESSED = "first_excepted";
 
   //private ProcedureRun parentRun = null;
   private ArchivedExecutable executable = null;
@@ -118,6 +120,7 @@ public class ExecutableRun extends AbstractRun implements DataDirectory, Compute
     setToProperty(KEY_EXIT_STATUS, -1);
     setToProperty(KEY_STARTED, false);
     setToProperty(KEY_PREPROCESSED, false);
+    getWorkspace().recordChildState(State.Created);
     super.setState(State.Created);
   }
 
@@ -516,13 +519,24 @@ public class ExecutableRun extends AbstractRun implements DataDirectory, Compute
     switch (state) {
       case Submitted:
         setToProperty(KEY_SUBMITTED_AT, DateTime.getCurrentEpoch());
+        if (!getBooleanFromProperty(KEY_FIRST_SUBMIT_PROCESSED, false)) {
+          setToProperty(KEY_FIRST_SUBMIT_PROCESSED, true);
+          getWorkspace().recordChildState(State.Submitted);
+        }
+        break;
+      case Finished:
+        setToProperty(KEY_FINISHED_AT, DateTime.getCurrentEpoch());
+        getWorkspace().recordChildState(State.Finished);
         break;
       case Canceled:
       case Aborted:
       case Excepted:
       case Failed:
-      case Finished:
         setToProperty(KEY_FINISHED_AT, DateTime.getCurrentEpoch());
+        if (!getBooleanFromProperty(KEY_FIRST_EXCEPTED_PROCESSED, false)) {
+          setToProperty(KEY_FIRST_EXCEPTED_PROCESSED, true);
+          getWorkspace().recordChildState(State.Excepted);
+        }
     }
 
     if (!State.Created.equals(state)) {

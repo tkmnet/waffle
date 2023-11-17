@@ -48,7 +48,9 @@ abstract public class MainTemplate extends AbstractTemplate {
           element("script", new Attributes(value("src", "/jsoneditor/jsoneditor.min.js"))),
           element("script", new Attributes(value("src", "/js/jquery.min.js"))),
           element("script", new Attributes(value("src", "/js/autoresizetextarea.js"))),
-          element("script", new Attributes(value("src", "/js/short.js")))
+          element("script", new Attributes(value("src", "/js/short.js"))),
+          element("script", new Attributes(value("src", "/js/simpleimport.js"))),
+          element("script",new Html.Attributes(Html.value("src", "/js/chart.umd.js"), Html.value("type", "text/javascript")), "")
         ),
         body((component.isSidebarCollapsed() ? "sidebar-collapse " : "") + "hold-transition layout-footer-fixed layout-fixed",
           AbstractUpdater.getUpdaterElements(),
@@ -131,7 +133,6 @@ abstract public class MainTemplate extends AbstractTemplate {
               "$(function(){$('.dial').knob();});"
           ),
           element("script", new Attributes(value("src", "/js/custom.js"))),
-          element("script", new Attributes(value("src", "/js/simpleimport.js"))),
           element("script", new Attributes(value("type", "text/javascript")),
               "var cid=" + BrowserMessage.getCurrentRowId() + ";" +
               "var loadBrowserMessage = function() {" +

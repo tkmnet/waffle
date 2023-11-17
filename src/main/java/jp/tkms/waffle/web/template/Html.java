@@ -197,7 +197,11 @@ public class Html {
         .replace(">", "&gt;");
     }
 
-    protected String content() {
+  public static String canvas(String id) {
+    return element("canvas", new Attributes(value("id", id)));
+  }
+
+  protected String content() {
     return "";
   }
 

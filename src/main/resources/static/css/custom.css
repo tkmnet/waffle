@@ -49,3 +49,7 @@ div.node-editor {
     width:100%;
     /*height:500px;*/
 }
+
+div.workspace-status-record {
+    height:12.5rem;
+}

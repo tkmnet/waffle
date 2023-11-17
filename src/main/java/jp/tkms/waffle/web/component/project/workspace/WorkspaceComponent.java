@@ -36,7 +36,7 @@ public class WorkspaceComponent extends AbstractAccessControlledComponent {
   public static final String KEY_WORKSPACE = "workspace";
   public static final String KEY_NOTE = "note";
 
-  public enum Mode {Default, RedirectToWorkspace, UpdateNote, Abort}
+  public enum Mode {Default, RedirectToWorkspace, UpdateNote, Abort, GetRecord}
   private Mode mode;
 
   private Project project;
@@ -54,6 +54,7 @@ public class WorkspaceComponent extends AbstractAccessControlledComponent {
     Spark.get(getUrl(null), new ResponseBuilder(() -> new WorkspaceComponent()));
     Spark.post(getUrl(null, Mode.UpdateNote), new ResponseBuilder(() -> new WorkspaceComponent(Mode.UpdateNote)));
     Spark.get(getUrl(null, Mode.Abort), new ResponseBuilder(() -> new WorkspaceComponent(Mode.Abort)));
+    Spark.get(getUrl(null, Mode.GetRecord), new ResponseBuilder(() -> new WorkspaceComponent(Mode.GetRecord)));
 
     RunComponent.register();
     StagedExecutableComponent.register();
@@ -97,6 +98,9 @@ public class WorkspaceComponent extends AbstractAccessControlledComponent {
       case RedirectToWorkspace:
         response.redirect(getUrl(workspace));
         break;
+      case GetRecord:
+        response.body(workspace.getChildStateRecord(Integer.valueOf(request.queryParams("pointer"))));
+        break;
       default:
         renderWorkspace();
     }
@@ -138,6 +142,43 @@ public class WorkspaceComponent extends AbstractAccessControlledComponent {
               Lte.formTextAreaGroup(KEY_NOTE, "Note", workspace.getNote(), null)
             ),
             Lte.formSubmitButton("success", "Update"), "card-danger", null));
+
+        if (workspace.hasChildStateRecord()) {
+          contents += Lte.card("Status", null,
+            Html.div("workspace-status-record", Html.canvas("workspace-status-chart")), null);
+          contents += Html.javascript("const ctx = document.getElementById('workspace-status-chart');" +
+            "workspaceStatusChart = new Chart(ctx, {" +
+            "type: 'scatter', data: {labels: []," +
+            "      datasets: [" +
+            "{\n" + "        label: 'Created',\n" + "borderColor: '#282c34A0'," + "pointStyle: false, showLine: true, data: [],}," +
+            "{\n" + "        label: 'Submitted',\n" + "borderColor: '#ffc107A0'," + "pointStyle: false, showLine: true, data: [],}," +
+            "{\n" + "        label: 'Finished',\n" + "borderColor: '#28a745A0'," + "pointStyle: false, showLine: true, data: [],}," +
+            "{\n" + "        label: 'Excepted'," + "borderColor: '#e31a1cA0'," + "pointStyle: false, showLine: true, data: [],}," +
+            "]\n" +
+            "    },\n" +
+            "options: {\n" +
+            "    maintainAspectRatio: false,\n" +
+            "    scales:{ x: {min:0, max:1} },\n" +
+            "    plugins: {\n" + "      legend: {\n" + "        position: 'top',\n" + "      }\n" + "    }\n" +
+            "  }," +
+            "  });" +
+            "workspaceStatusRecordPointer = 0;" +
+            "addWorkspaceStatusRecord = function(lines) {" +
+            "data = workspaceStatusChart.data;" +
+            "lines.trim().split('\\n').forEach(line=>{" +
+            "if (line == '') {return;}" +
+            "elements = line.split(',');" +
+            "workspaceStatusChart.options.scales.x.max = Number(elements[0]);" +
+            "for(i=0; i<4; i+=1){data.datasets[i].data.push({x:elements[0],y:elements[i + 1]});}" +
+            "workspaceStatusRecordPointer += 1;" +
+            "});" +
+            "workspaceStatusChart.update();" +
+            "};" +
+            "workspaceStatusRecordUpdate = function(){simpleget('" + getUrl(workspace, Mode.GetRecord) + "?pointer=' + workspaceStatusRecordPointer, v=>{addWorkspaceStatusRecord(v);});};" +
+            "setInterval(workspaceStatusRecordUpdate, 5000);" +
+            "workspaceStatusRecordUpdate();" +
+            "");
+        }
 
         contents += Lte.divRow(
           Lte.divCol(Lte.DivSize.F12Md12Sm6, Lte.card(Html.fasIcon("user-tie") + "Staged" + ConductorComponent.CONDUCTORS, null,

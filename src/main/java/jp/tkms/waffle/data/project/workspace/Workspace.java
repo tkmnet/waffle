@@ -1,5 +1,6 @@
 package jp.tkms.waffle.data.project.workspace;
 
+import jp.tkms.utils.concurrent.LockByKey;
 import jp.tkms.utils.file.UpdatableLogFile;
 import jp.tkms.waffle.Constants;
 import jp.tkms.waffle.data.DataDirectory;
@@ -134,6 +135,7 @@ public class Workspace extends ProjectData implements DataDirectory, PropertyFil
   public long getStartedAt() {
     if (startedAt < 0) {
       startedAt = getLongFromProperty(KEY_STARTED_AT, DateTime.getCurrentEpoch());
+      setToProperty(KEY_STARTED_AT, startedAt);
     }
     return startedAt;
   }
@@ -185,32 +187,59 @@ public class Workspace extends ProjectData implements DataDirectory, PropertyFil
     }
   }
 
-  public void recordChildStatus(State state, int delta) {
-    // LOCALTIME, CREATED, RUNNING, FINISHED, FAILED
-    int mode = 1;
-    if (state.equals(State.Running)) {
-      mode = 2;
-    } else if (state.equals(State.Finished)) {
-      mode = 3;
-    } else if (state.equals(State.Failed)) {
-      mode = 4;
+  private static final Map<State, Integer> stateRecordSlots = new HashMap<>() {{
+    put(State.Created, 1);
+    put(State.Submitted, 2);
+    put(State.Finished, 3);
+    put(State.Excepted, 4);
+  }};
+
+  public void recordChildState(State state) {
+    // LOCALTIME, CREATED, SUBMITTED, FINISHED, FAILED
+    int slot = stateRecordSlots.get(state);
+
+    try (LockByKey lock = LockByKey.acquire(recordPath)) {
+      for (int c = 0; c < 10; c += 1) {
+        try (UpdatableLogFile file = new UpdatableLogFile(recordPath)) {
+          String line = file.getLastLine().trim();
+          if (line.equals("")) {
+            line = "0,0,0,0,0";
+            file.updateLastLine(line);
+          }
+          String entries[] = line.split(",");
+          long localTime = DateTime.getCurrentEpoch() - getStartedAt();
+          if (localTime >= 0 && !entries[0].equals(String.valueOf(localTime))) {
+            entries[0] = String.valueOf(localTime);
+            entries[slot] = String.valueOf(Long.valueOf(entries[slot].trim()) + 1);
+            file.addLine(String.join(",", entries));
+          } else {
+            entries[slot] = String.valueOf(Long.valueOf(entries[slot].trim()) + 1);
+            file.updateLastLine(String.join(",", entries));
+          }
+        } catch (Exception e) {
+          WarnLogMessage.issue(e);
+          System.err.println("SLOT: " + slot);
+        }
+        break;
+      }
     }
+  }
 
-    try (UpdatableLogFile file = new UpdatableLogFile(recordPath)) {
-      String line = file.getLastLine();
-      if (line.equals("")) {
-        line = "0,0,0,0,0";
-        file.updateLastLine(line);
+  public boolean hasChildStateRecord() {
+    return Files.exists(recordPath);
+  }
+
+  public String getChildStateRecord(int from) {
+    try {
+      StringBuilder builder = new StringBuilder();
+      List<String> lines = Files.readAllLines(recordPath);
+      for (int i = from; i < lines.size(); i += 1) {
+        builder.append(lines.get(i));
+        builder.append('\n');
       }
-      String entries[] = line.split(",");
-      long localTime = DateTime.getCurrentEpoch() - getStartedAt();
-      if (localTime >= 0 && !entries[0].equals(String.valueOf(localTime))) {
-
-      } else {
-
-      }
-    } catch (Exception e) {
-      WarnLogMessage.issue(e);
+      return builder.toString();
+    } catch (IOException e) {
+      return "";
     }
   }
 }
