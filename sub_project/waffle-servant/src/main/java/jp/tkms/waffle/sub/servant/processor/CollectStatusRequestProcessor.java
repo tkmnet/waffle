@@ -59,15 +59,6 @@ public class CollectStatusRequestProcessor extends RequestProcessor<CollectStatu
       JsonObject jsonObject = Json.parse(outputWriter.toString()).asObject();
       messageList.stream().parallel().forEach(message-> {
         try {
-          new EventReader(baseDirectory, message.getWorkingDirectory()).process((name, value) -> {
-            response.add(new UpdateResultMessage(message, name, value));
-          });
-          new EventDirReader(baseDirectory, message.getWorkingDirectory()).process((name, value) -> {
-            response.add(new UpdateResultMessage(message, name, value));
-          });
-
-          PushFileCommand.process(message.getWorkingDirectory(), (m) -> response.add(m) );
-
           GetValueCommand.process(message.getWorkingDirectory(), (m) -> response.add(m) );
 
           if (jsonObject.get(message.getJobId()).asObject().getString("status", null).toString().equals("finished")) {
@@ -90,6 +81,15 @@ public class CollectStatusRequestProcessor extends RequestProcessor<CollectStatu
           } else {
             response.add(new UpdateStatusMessage(message));
           }
+
+          new EventReader(baseDirectory, message.getWorkingDirectory()).process((name, value) -> {
+            response.add(new UpdateResultMessage(message, name, value));
+          });
+          new EventDirReader(baseDirectory, message.getWorkingDirectory()).process((name, value) -> {
+            response.add(new UpdateResultMessage(message, name, value));
+          });
+
+          PushFileCommand.process(message.getWorkingDirectory(), (m) -> response.add(m) );
         } catch (Exception e) {
           response.add(new JobExceptionMessage(message, e.getMessage() + "\n" + outputWriter.toString()));
           response.add(message.getWorkingDirectory().resolve(Constants.STDOUT_FILE));

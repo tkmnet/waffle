@@ -18,15 +18,6 @@ public class CollectPodTaskStatusRequestProcessor extends RequestProcessor<Colle
   protected void processIfMessagesExist(Path baseDirectory, Envelope request, Envelope response, ArrayList<CollectPodTaskStatusMessage> messageList) throws ClassNotFoundException, IOException {
     messageList.stream().parallel().forEach(message -> {
       try {
-        new EventReader(baseDirectory, message.getWorkingDirectory()).process((name, value) -> {
-          response.add(new UpdateResultMessage(message, name, value));
-        });
-        new EventDirReader(baseDirectory, message.getWorkingDirectory()).process((name, value) -> {
-          response.add(new UpdateResultMessage(message, name, value));
-        });
-
-        PushFileCommand.process(message.getWorkingDirectory(), (m) -> response.add(m) );
-
         GetValueCommand.process(message.getWorkingDirectory(), (m) -> response.add(m) );
 
         Path jobsDirectory = baseDirectory.resolve(message.getPodDirectory()).resolve(AbstractExecutor.JOBS_PATH);
@@ -51,6 +42,15 @@ public class CollectPodTaskStatusRequestProcessor extends RequestProcessor<Colle
         } else {
           response.add(new UpdateStatusMessage(message));
         }
+
+        new EventReader(baseDirectory, message.getWorkingDirectory()).process((name, value) -> {
+          response.add(new UpdateResultMessage(message, name, value));
+        });
+        new EventDirReader(baseDirectory, message.getWorkingDirectory()).process((name, value) -> {
+          response.add(new UpdateResultMessage(message, name, value));
+        });
+
+        PushFileCommand.process(message.getWorkingDirectory(), (m) -> response.add(m) );
       } catch (Exception e) {
         response.add(new JobExceptionMessage(message, e.getMessage()));
         response.add(message.getWorkingDirectory().resolve(Constants.STDOUT_FILE));

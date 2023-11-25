@@ -158,7 +158,7 @@ public class WorkspaceComponent extends AbstractAccessControlledComponent {
             "    },\n" +
             "options: {\n" +
             "    maintainAspectRatio: false,\n" +
-            "    scales:{ x: {min:0, max:1} },\n" +
+            "    scales:{ x: {type:'linear', min:0, max:1} },\n" +
             "    plugins: {\n" + "      legend: {\n" + "        position: 'top',\n" + "      }\n" + "    }\n" +
             "  }," +
             "  });" +
@@ -168,8 +168,10 @@ public class WorkspaceComponent extends AbstractAccessControlledComponent {
             "lines.trim().split('\\n').forEach(line=>{" +
             "if (line == '') {return;}" +
             "elements = line.split(',');" +
-            "workspaceStatusChart.options.scales.x.max = Number(elements[0]);" +
-            "for(i=0; i<4; i+=1){data.datasets[i].data.push({x:elements[0],y:elements[i + 1]});}" +
+            "time = Number(elements[0]);" +
+            "data.labels.push(time);" +
+            "workspaceStatusChart.options.scales.x.max = time;" +
+            "for(i=0; i<4; i+=1){data.datasets[i].data.push(elements[i + 1]);}" +
             "workspaceStatusRecordPointer += 1;" +
             "});" +
             "workspaceStatusChart.update();" +
