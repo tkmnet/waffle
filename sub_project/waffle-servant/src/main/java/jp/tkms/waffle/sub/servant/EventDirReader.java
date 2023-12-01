@@ -8,7 +8,6 @@ import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
 public class EventDirReader {
-  public static final String EVENT_DIR = "EVENT";
   public static final String SECTION_SEPARATING_MARK = "\n";
 
   private Path newDirtPath;
@@ -17,8 +16,8 @@ public class EventDirReader {
     if (!workingDirectory.isAbsolute()) {
       workingDirectory = baseDirectory.resolve(workingDirectory);
     }
-    this.newDirtPath = workingDirectory.resolve(EVENT_DIR).resolve("new");
-    this.curDirtPath = workingDirectory.resolve(EVENT_DIR).resolve("cur");
+    this.newDirtPath = workingDirectory.resolve(Constants.EVENT_DIR).resolve("new");
+    this.curDirtPath = workingDirectory.resolve(Constants.EVENT_DIR).resolve("cur");
   }
 
   public void process(BiConsumer<String, String> consumer) {

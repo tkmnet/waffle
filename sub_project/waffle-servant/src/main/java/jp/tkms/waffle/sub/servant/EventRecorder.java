@@ -102,7 +102,7 @@ public class EventRecorder {
 
   public static void createEventRecord(String key, String value) {
     if (System.getenv().containsKey(Constants.WAFFLE_BATCH_WORKING_DIR)) {
-      Path eventDirPath = Paths.get(System.getenv().get(Constants.WAFFLE_BATCH_WORKING_DIR)).resolve(EventDirReader.EVENT_DIR);
+      Path eventDirPath = Paths.get(System.getenv().get(Constants.WAFFLE_BATCH_WORKING_DIR)).resolve(Constants.EVENT_DIR);
       Path tmpPath = eventDirPath.resolve("tmp");
       Path newPath = eventDirPath.resolve("new");
       Path recordPath;

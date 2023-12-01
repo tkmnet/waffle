@@ -20,6 +20,8 @@ public class DirectoryHash {
     Paths.get(Constants.EXIT_STATUS_FILE),
     Paths.get(Constants.STDOUT_FILE),
     Paths.get(Constants.STDERR_FILE),
+    Paths.get(Constants.EVENT_FILE),
+    Paths.get(Constants.EVENT_DIR),
     Paths.get("task.json")
   };
 
