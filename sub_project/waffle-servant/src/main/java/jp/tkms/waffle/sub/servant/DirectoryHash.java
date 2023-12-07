@@ -21,7 +21,7 @@ public class DirectoryHash {
     Paths.get(Constants.STDOUT_FILE),
     Paths.get(Constants.STDERR_FILE),
     Paths.get(Constants.EVENT_FILE),
-    Paths.get(Constants.EVENT_DIR),
+    Paths.get(Constants.EVENT_DIR).resolve(Constants.REMAINS_FILE),
     Paths.get("task.json")
   };
 

@@ -19,6 +19,7 @@ public class CollectPodTaskStatusRequestProcessor extends RequestProcessor<Colle
     messageList.stream().parallel().forEach(message -> {
       try {
         GetValueCommand.process(message.getWorkingDirectory(), (m) -> response.add(m) );
+        EventDirReader eventDirReader = new EventDirReader(baseDirectory, message.getWorkingDirectory());
 
         Path jobsDirectory = baseDirectory.resolve(message.getPodDirectory()).resolve(AbstractExecutor.JOBS_PATH);
         if (message.isForceFinish() || !Files.exists(jobsDirectory.resolve(message.getId()))) {
@@ -29,7 +30,7 @@ public class CollectPodTaskStatusRequestProcessor extends RequestProcessor<Colle
           } catch (Exception | Error e) {
             exitStatus = -1;
           }
-          if ((exitStatus >= 0 && new DirectoryHash(baseDirectory, message.getWorkingDirectory()).isMatchToHashFile()) || exitStatus < 0 || CollectStatusRequestProcessor.isSynchronizationTimeout(exitStatusFile)) {
+          if ((exitStatus >= 0 && new DirectoryHash(baseDirectory, message.getWorkingDirectory()).isMatchToHashFile() && eventDirReader.isFoundAllRemains()) || exitStatus < 0 || CollectStatusRequestProcessor.isSynchronizationTimeout(exitStatusFile)) {
             //(new DirectoryHash(baseDirectory, message.getWorkingDirectory())).waitToMatch(Constants.DIRECTORY_SYNCHRONIZATION_TIMEOUT);
             response.add(new PodTaskFinishedMessage(message));
             response.add(new UpdateStatusMessage(message, exitStatus));
@@ -46,7 +47,7 @@ public class CollectPodTaskStatusRequestProcessor extends RequestProcessor<Colle
         new EventReader(baseDirectory, message.getWorkingDirectory()).process((name, value) -> {
           response.add(new UpdateResultMessage(message, name, value));
         });
-        new EventDirReader(baseDirectory, message.getWorkingDirectory()).process((name, value) -> {
+        eventDirReader.process((name, value) -> {
           response.add(new UpdateResultMessage(message, name, value));
         });
 

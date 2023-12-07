@@ -250,6 +250,7 @@ public class TaskExecutor extends TaskCommand {
       }
 
       // update hash file
+      new EventDirReader(baseDirectory, taskDirectory).recordRemains();
       directoryHash.update();
     } catch (IOException | InterruptedException e) {
       e.printStackTrace();

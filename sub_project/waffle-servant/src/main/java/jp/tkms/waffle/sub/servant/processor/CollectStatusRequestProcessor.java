@@ -60,6 +60,7 @@ public class CollectStatusRequestProcessor extends RequestProcessor<CollectStatu
       messageList.stream().parallel().forEach(message-> {
         try {
           GetValueCommand.process(message.getWorkingDirectory(), (m) -> response.add(m) );
+          EventDirReader eventDirReader = new EventDirReader(baseDirectory, message.getWorkingDirectory());
 
           if (jsonObject.get(message.getJobId()).asObject().getString("status", null).toString().equals("finished")) {
             int exitStatus = -2;
@@ -69,8 +70,7 @@ public class CollectStatusRequestProcessor extends RequestProcessor<CollectStatu
             } catch (Exception | Error e) {
               exitStatus = -1;
             }
-            if ((exitStatus >= 0 && new DirectoryHash(baseDirectory, message.getWorkingDirectory()).isMatchToHashFile()) || exitStatus < 0 || isSynchronizationTimeout(exitStatusFile)) {
-              //(new DirectoryHash(baseDirectory, message.getWorkingDirectory())).waitToMatch(Constants.DIRECTORY_SYNCHRONIZATION_TIMEOUT);
+            if ((exitStatus >= 0 && new DirectoryHash(baseDirectory, message.getWorkingDirectory()).isMatchToHashFile() && eventDirReader.isFoundAllRemains()) || exitStatus < 0 || isSynchronizationTimeout(exitStatusFile)) {
               response.add(new UpdateStatusMessage(message, exitStatus));
               response.add(message.getWorkingDirectory().resolve(Constants.STDOUT_FILE));
               response.add(message.getWorkingDirectory().resolve(Constants.STDERR_FILE));
@@ -85,7 +85,7 @@ public class CollectStatusRequestProcessor extends RequestProcessor<CollectStatu
           new EventReader(baseDirectory, message.getWorkingDirectory()).process((name, value) -> {
             response.add(new UpdateResultMessage(message, name, value));
           });
-          new EventDirReader(baseDirectory, message.getWorkingDirectory()).process((name, value) -> {
+          eventDirReader.process((name, value) -> {
             response.add(new UpdateResultMessage(message, name, value));
           });
 
