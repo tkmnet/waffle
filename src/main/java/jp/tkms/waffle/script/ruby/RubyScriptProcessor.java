@@ -1,6 +1,7 @@
 package jp.tkms.waffle.script.ruby;
 
 import jp.tkms.waffle.Constants;
+import jp.tkms.waffle.data.log.message.ErrorLogMessage;
 import jp.tkms.waffle.data.log.message.WarnLogMessage;
 import jp.tkms.waffle.data.project.workspace.HasLocalPath;
 import jp.tkms.waffle.data.project.workspace.convertor.WorkspaceConvertorRun;
@@ -31,13 +32,17 @@ public class RubyScriptProcessor extends ScriptProcessor {
   @Override
   public String checkSyntax(Path scriptPath) {
     String error = "";
-    ScriptingContainer container = new ScriptingContainer(LocalContextScope.SINGLETHREAD);
+    ScriptingContainer container = new ScriptingContainer(LocalContextScope.SINGLETON);
     try {
       container.parse(PathType.ABSOLUTE, scriptPath.toString());
     } catch (ParseFailedException e) {
       error = e.getMessage().replaceFirst("^.*?:", "");
     }
-    container.terminate();
+    try {
+      container.finalize();
+    } catch (Throwable e) {
+      ErrorLogMessage.issue(e);
+    }
     return error;
   }
 

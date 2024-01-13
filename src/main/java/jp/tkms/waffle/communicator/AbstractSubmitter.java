@@ -192,10 +192,11 @@ abstract public class AbstractSubmitter {
     }
   }
 
-  public Envelope getNextEnvelope() {
+  public Envelope getNextEnvelope() throws ConnectionClosedException {
     if (isStreamMode()) {
       if (selfCommunicativeEnvelope.isClosed()) {
         brake();
+        throw new ConnectionClosedException(this);
       }
       return selfCommunicativeEnvelope;
     }
@@ -204,8 +205,8 @@ abstract public class AbstractSubmitter {
 
   private void brake() {
     if (!isBroken) {
+      isBroken = true;
       new Thread(() -> {
-        isBroken = true;
         close();
       }).start();
     }
@@ -314,6 +315,8 @@ abstract public class AbstractSubmitter {
       } while (!(remoteSyncedTime.get() >= syncStartTime || System.currentTimeMillis() >= syncStartTime + TIMEOUT));
     } catch (InterruptedException e) {
       ErrorLogMessage.issue(e);
+    } catch (ConnectionClosedException e) {
+      InfoLogMessage.issue(e);
     }
   }
 
@@ -730,6 +733,8 @@ abstract public class AbstractSubmitter {
     } catch (FailedToControlRemoteException e) {
       isRunning = false;
       throw e;
+    } catch (ConnectionClosedException e) {
+      InfoLogMessage.issue(e);
     }
   }
 
@@ -792,7 +797,13 @@ abstract public class AbstractSubmitter {
 
     @Override
     public void run() {
-      Envelope envelope = getNextEnvelope();
+      Envelope envelope = null;
+      try {
+        envelope = getNextEnvelope();
+      } catch (ConnectionClosedException e) {
+        InfoLogMessage.issue(e);
+        return;
+      }
 
       ArrayList<AbstractTask> createdJobList = new ArrayList<>();
       ArrayList<AbstractTask> preparedJobList = new ArrayList<>();
@@ -839,7 +850,12 @@ abstract public class AbstractSubmitter {
 
         if (Main.hibernatingFlag || isBroken) { break; }
         if (isRemained) {
-          envelope = getNextEnvelope();
+          try {
+            envelope = getNextEnvelope();
+          } catch (ConnectionClosedException e) {
+            InfoLogMessage.issue(e);
+            return;
+          }
         }
       }
     }
@@ -897,7 +913,13 @@ abstract public class AbstractSubmitter {
 
     @Override
     public void run() {
-      Envelope envelope = getNextEnvelope();
+      Envelope envelope = null;
+      try {
+        envelope = getNextEnvelope();
+      } catch (ConnectionClosedException e) {
+        InfoLogMessage.issue(e);
+        return;
+      }
 
       ArrayList<AbstractTask> submittedJobList = new ArrayList<>();
       ArrayList<AbstractTask> preparedJobList = new ArrayList<>();
@@ -950,7 +972,12 @@ abstract public class AbstractSubmitter {
 
         if (Main.hibernatingFlag || isBroken) { break; }
         if (isRemained) {
-          envelope = getNextEnvelope();
+          try {
+            envelope = getNextEnvelope();
+          } catch (ConnectionClosedException e) {
+            InfoLogMessage.issue(e);
+            break;
+          }
         }
       }
 
@@ -1063,7 +1090,13 @@ abstract public class AbstractSubmitter {
       do {
         if (Main.hibernatingFlag || isBroken) { return; }
 
-        Envelope envelope = getNextEnvelope();
+        Envelope envelope = null;
+        try {
+          envelope = getNextEnvelope();
+        } catch (ConnectionClosedException e) {
+          InfoLogMessage.issue(e);
+          break;
+        }
 
         finalizingJobList.clear();
 

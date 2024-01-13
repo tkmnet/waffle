@@ -12,6 +12,10 @@ public class InfoLogMessage extends LogMessage {
     new InfoLogMessage(message).printMessage();
   }
 
+  public static void issue(Throwable e) {
+    new InfoLogMessage(getStackTrace(e)).printMessage();
+  }
+
   public static void issue(ComputerTask run, String message) {
     new InfoLogMessage("Run(" + run.getLocalPath().toString() + ") " + message).printMessage();
   }

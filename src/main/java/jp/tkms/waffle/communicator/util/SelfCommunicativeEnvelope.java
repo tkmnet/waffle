@@ -2,6 +2,7 @@ package jp.tkms.waffle.communicator.util;
 
 import jp.tkms.waffle.Constants;
 import jp.tkms.waffle.communicator.AbstractSubmitter;
+import jp.tkms.waffle.communicator.JobNumberLimitedLocalSubmitter;
 import jp.tkms.waffle.communicator.process.RemoteProcess;
 import jp.tkms.waffle.data.log.message.ErrorLogMessage;
 import jp.tkms.waffle.data.log.message.InfoLogMessage;
@@ -28,6 +29,7 @@ public class SelfCommunicativeEnvelope extends Envelope {
   Object messageLocker = new Object();
   Object fileLocker = new Object();
   long lastBootTime;
+  boolean isLocal;
 
   AtomicInteger entryCounter = new AtomicInteger(0);
   Thread autoFlusher = new Thread() {
@@ -46,6 +48,7 @@ public class SelfCommunicativeEnvelope extends Envelope {
 
   public SelfCommunicativeEnvelope(Path baseDirectory, RemoteProcess remoteProcess, AbstractSubmitter submitter) {
     super(baseDirectory);
+    this.isLocal = submitter instanceof JobNumberLimitedLocalSubmitter;
     this.lastBootTime = System.currentTimeMillis();
     this.confirmPreparingMessageMap = new HashMap<>();
     this.remoteProcess = remoteProcess;
@@ -121,6 +124,7 @@ public class SelfCommunicativeEnvelope extends Envelope {
   }
 
   private void tryShortBreak() {
+    if (isLocal) return;
     if (this.lastBootTime + Constants.TIME_LIMIT_OF_STREAM_MODE_SERVANT < System.currentTimeMillis()) {
       try {
         transceiver.requestReboot();

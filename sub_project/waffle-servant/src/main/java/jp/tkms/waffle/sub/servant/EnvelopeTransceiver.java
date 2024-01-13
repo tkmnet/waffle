@@ -294,8 +294,8 @@ public class EnvelopeTransceiver {
               case B_BEL:
                 if (isRebootable) {
                   shutdown(true);
-                  return;
                 }
+                break;
               case B_EM:
                 shutdown(false);
                 return;

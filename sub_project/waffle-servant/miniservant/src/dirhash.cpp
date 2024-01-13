@@ -22,6 +22,7 @@ namespace miniservant
         res.push_back(std::filesystem::path("EXIT_STATUS.log"));
         res.push_back(std::filesystem::path("STDOUT.txt"));
         res.push_back(std::filesystem::path("STDERR.txt"));
+        res.push_back(std::filesystem::path("EVENT.bin"));
         res.push_back(std::filesystem::path("task.json"));
         return res;
     };

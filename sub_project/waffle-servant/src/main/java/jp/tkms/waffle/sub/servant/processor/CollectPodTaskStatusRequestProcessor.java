@@ -37,7 +37,7 @@ public class CollectPodTaskStatusRequestProcessor extends RequestProcessor<Colle
             response.add(message.getWorkingDirectory().resolve(Constants.STDOUT_FILE));
             response.add(message.getWorkingDirectory().resolve(Constants.STDERR_FILE));
           } else {
-            response.add(new ExceptionMessage(message.getWorkingDirectory().toString()));
+            //response.add(new ExceptionMessage(message.getWorkingDirectory().toString()));
             response.add(new UpdateStatusMessage(message));
           }
         } else {
