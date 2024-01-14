@@ -153,7 +153,7 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
 
   @Override
   public Envelope processResponse(Envelope response) {
-    // super.processResponse(response);
+    //super.processResponse(response);
 
     if (response != null) {
       for (RequestRepreparingMessage message : response.getMessageBundle().getCastedMessageList(RequestRepreparingMessage.class)) {
@@ -454,6 +454,7 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
         } else {
           cacheAppliedList.addAll(shuffledList);
         }
+        submittableCache = null;
 
         for (VirtualJobExecutor executor : cacheAppliedList) {
           Path directoryPath = executor.getPath();
@@ -736,18 +737,6 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
           String jobId = id.getReversedBase36Code() + '.' + getNextJobCount();
           Path podDirectory = InternalFiles.getLocalPath(getComputer().getLocalPath().resolve(JOB_MANAGER).resolve(id.getReversedBase36Code()));
           envelope.add(new SubmitPodTaskMessage(job.getTypeCode(), job.getHexCode(), jobId, podDirectory, job.getRun().getLocalPath(), job.getRun().getRemoteBinPath()));
-        /*
-        Path runDirectoryPath = submitter.getRunDirectory(job.getRun());
-        submitter.createDirectories(getRemoteEntitiesDirectory());
-        submitter.createDirectories(getRemoteJobsDirectory());
-        submitter.chmod(777, getRemoteEntitiesDirectory());
-        submitter.chmod(777, getRemoteJobsDirectory());
-        submitter.putText(job, getRemoteEntitiesDirectory().resolve(job.getId().toString()), runDirectoryPath.toString());
-        submitter.chmod(666, getRemoteEntitiesDirectory().resolve(job.getId().toString()));
-        submitter.putText(job, getRemoteJobsDirectory().resolve(job.getId().toString()), "");
-        submitter.chmod(666, getRemoteJobsDirectory().resolve(job.getId().toString()));
-        job.setJobId(jobId);
-         */
           putToArrayOfProperty(RUNNING, jobId);
           jobCache.put(jobId, job);
           job.setState(State.Submitted);

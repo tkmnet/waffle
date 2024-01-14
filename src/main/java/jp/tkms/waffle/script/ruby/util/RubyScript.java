@@ -4,6 +4,7 @@ import jp.tkms.waffle.data.log.message.ErrorLogMessage;
 import jp.tkms.waffle.data.log.message.WarnLogMessage;
 import jp.tkms.waffle.data.util.ResourceFile;
 import jp.tkms.waffle.web.component.websocket.PushNotifier;
+import org.checkerframework.checker.units.qual.A;
 import org.jruby.RubyInstanceConfig;
 import org.jruby.embed.EvalFailedException;
 import org.jruby.embed.LocalContextScope;
@@ -15,14 +16,20 @@ import org.jruby.exceptions.SystemCallError;
 import org.jruby.util.ClassesLoader;
 import org.jruby.util.JRubyClassLoader;
 
+import java.util.ArrayList;
+import java.util.Queue;
+import java.util.Stack;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class RubyScript {
-  private static AtomicInteger runningCount = new AtomicInteger(0);
+
+  public static final int THREADS = 20;
+  private static Semaphore counter = new Semaphore(THREADS);
 
   public static boolean hasRunning() {
-    return (runningCount.get() > 0);
+    return counter.availablePermits() >= THREADS;
   }
 
   public static boolean process(Consumer<ScriptingContainer> process) {
@@ -71,7 +78,7 @@ public class RubyScript {
   }
 
   public static String debugReport() {
-    return RubyScript.class.getSimpleName() + " : runningCount=" + runningCount.get();
+    return RubyScript.class.getSimpleName() + " : runningCount=" + (THREADS - counter.availablePermits());
   }
 
   public static String getInitScript() {
@@ -80,6 +87,14 @@ public class RubyScript {
 
 
   static class ScriptingContainerWrapper extends Thread {
+    private static Stack<ScriptingContainer> containers = new Stack<>() {
+      {
+        for (int i = 0; i < THREADS; i += 1) {
+          add(new ScriptingContainer(LocalContextScope.SINGLETHREAD, LocalVariableBehavior.TRANSIENT));
+        }
+      }
+    };
+
     Consumer<ScriptingContainer> process;
     boolean isSuccess;
 
@@ -97,41 +112,44 @@ public class RubyScript {
     public void run() {
       boolean failed;
       do {
-        runningCount.incrementAndGet();
         PushNotifier.sendRubyRunningStatus(true);
         failed = false;
-        synchronized (runningCount) {
-          //ScriptingContainer container = new ScriptingContainer(LocalContextScope.SINGLETHREAD, LocalVariableBehavior.TRANSIENT);
-          ScriptingContainer container = new ScriptingContainer(LocalContextScope.SINGLETON, LocalVariableBehavior.TRANSIENT);
+        //ScriptingContainer container = new ScriptingContainer(LocalContextScope.SINGLETHREAD, LocalVariableBehavior.TRANSIENT);
+        try {
+          counter.acquire();
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+        ScriptingContainer container = containers.pop();
+        try {
           try {
-            try {
-              container.runScriptlet(getInitScript());
-              process.accept(container);
-              isSuccess = true;
-            } catch (EvalFailedException e) {
-              ErrorLogMessage.issue(e);
-            }
-          } catch (SystemCallError | LoadError e) {
-            failed = true;
-            if (!e.getMessage().matches("Unknown error")) {
-              failed = false;
-            }
-            WarnLogMessage.issue(e);
-            try {
-              Thread.sleep(1000);
-            } catch (InterruptedException ex) {
-            }
-          } finally {
-            try {
-              container.finalize();
-              System.gc();
-            } catch (Throwable e) {
-              ErrorLogMessage.issue(e);
-            }
-            container = null;
-            runningCount.decrementAndGet();
-            PushNotifier.sendRubyRunningStatus(false);
+            container.runScriptlet(getInitScript());
+            process.accept(container);
+            isSuccess = true;
+          } catch (EvalFailedException e) {
+            ErrorLogMessage.issue(e);
           }
+        } catch (SystemCallError | LoadError e) {
+          failed = true;
+          if (!e.getMessage().matches("Unknown error")) {
+            failed = false;
+          }
+          WarnLogMessage.issue(e);
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException ex) {
+          }
+        } finally {
+          try {
+            container.clear();
+          } catch (Throwable e) {
+            ErrorLogMessage.issue(e);
+          }
+          PushNotifier.sendRubyRunningStatus(false);
+
+          containers.add(container);
+          counter.release();
+          System.gc();
         }
       } while (failed);
     }

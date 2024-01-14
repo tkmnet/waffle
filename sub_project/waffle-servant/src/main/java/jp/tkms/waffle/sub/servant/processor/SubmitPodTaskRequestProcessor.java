@@ -99,7 +99,11 @@ public class SubmitPodTaskRequestProcessor extends RequestProcessor<SubmitPodTas
         //Runtime.getRuntime().exec("chmod 777 '" + entitiesDirectory.toString() + "'").waitFor();
 
         if (!Files.exists(podPath.resolve(AbstractExecutor.HASH_IGNORE_FILE_PATH))) {
-          Files.createFile(podPath.resolve(AbstractExecutor.HASH_IGNORE_FILE_PATH));
+          try {
+            Files.createFile(podPath.resolve(AbstractExecutor.HASH_IGNORE_FILE_PATH));
+          } catch (Exception e) {
+            //NOP
+          }
         }
 
         Files.writeString(entitiesDirectory.resolve(message.getId()), workingDirectory.toString());

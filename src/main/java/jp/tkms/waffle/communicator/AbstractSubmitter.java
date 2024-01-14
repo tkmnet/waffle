@@ -782,7 +782,7 @@ abstract public class AbstractSubmitter {
   }
 
   public boolean isClosed() {
-    return isClosed;
+    return isClosed || isBroken;
   }
 
   private boolean isStreamMode() {
