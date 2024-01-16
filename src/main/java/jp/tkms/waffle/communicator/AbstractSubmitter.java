@@ -301,7 +301,7 @@ abstract public class AbstractSubmitter {
     return null;
   }
 
-  private void syncServantProcess() {
+  private void syncServantProcess() throws ConnectionClosedException {
     long syncStartTime = System.currentTimeMillis();
     try {
       do {
@@ -315,8 +315,6 @@ abstract public class AbstractSubmitter {
       } while (!(remoteSyncedTime.get() >= syncStartTime || System.currentTimeMillis() >= syncStartTime + TIMEOUT));
     } catch (InterruptedException e) {
       ErrorLogMessage.issue(e);
-    } catch (ConnectionClosedException e) {
-      InfoLogMessage.issue(e);
     }
   }
 
@@ -734,7 +732,8 @@ abstract public class AbstractSubmitter {
       isRunning = false;
       throw e;
     } catch (ConnectionClosedException e) {
-      InfoLogMessage.issue(e);
+      isRunning = false;
+      throw new FailedToControlRemoteException(e);
     }
   }
 

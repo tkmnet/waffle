@@ -127,5 +127,6 @@ public class MessageBundle {
     kryo.register(SyncRequestMessage.class);
     kryo.register(SyncResponseMessage.class);
     kryo.register(CheckJobIdMessage.class);
+    kryo.register(PodLostMessage.class);
   }
 }
