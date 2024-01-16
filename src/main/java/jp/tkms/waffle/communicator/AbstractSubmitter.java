@@ -73,6 +73,7 @@ abstract public class AbstractSubmitter {
   ProcessorManager<SubmittingProcessor> submittingProcessorManager = new ProcessorManager<>(SubmittingProcessor::new);
   ProcessorManager<FinishedProcessor> finishedProcessorManager = new ProcessorManager<>(FinishedProcessor::new);
 
+  public boolean isStreamInhibited = false; // TODO: ...
   private boolean isBroken = false;
   private boolean isClosed = false;
   protected SelfCommunicativeEnvelope selfCommunicativeEnvelope = null;
@@ -184,11 +185,13 @@ abstract public class AbstractSubmitter {
   }
 
   protected void switchToStreamMode() {
-    try {
-      RemoteProcess remoteProcess = startProcess(getServantCommand(this, null));
-      selfCommunicativeEnvelope = new SelfCommunicativeEnvelope(Constants.WORK_DIR, remoteProcess, this);
-    } catch (FailedToControlRemoteException e) {
-      WarnLogMessage.issue(e);
+    if (! isStreamInhibited) {
+      try {
+        RemoteProcess remoteProcess = startProcess(getServantCommand(this, null));
+        selfCommunicativeEnvelope = new SelfCommunicativeEnvelope(Constants.WORK_DIR, remoteProcess, this);
+      } catch (FailedToControlRemoteException e) {
+        WarnLogMessage.issue(e);
+      }
     }
   }
 
@@ -301,7 +304,7 @@ abstract public class AbstractSubmitter {
     return null;
   }
 
-  private void syncServantProcess() {
+  private void syncServantProcess() throws ConnectionClosedException {
     long syncStartTime = System.currentTimeMillis();
     try {
       do {
@@ -315,8 +318,6 @@ abstract public class AbstractSubmitter {
       } while (!(remoteSyncedTime.get() >= syncStartTime || System.currentTimeMillis() >= syncStartTime + TIMEOUT));
     } catch (InterruptedException e) {
       ErrorLogMessage.issue(e);
-    } catch (ConnectionClosedException e) {
-      InfoLogMessage.issue(e);
     }
   }
 
@@ -540,17 +541,21 @@ abstract public class AbstractSubmitter {
     String remoteHash = submitter.exec("sh \"" + submitter.getAbsolutePath(servantScript.getScriptPath()).toString() + "\" version").trim(); //TODO:
     //String localHash = ServantJarFile.getMD5Sum().trim();
     String localHash = Main.VERSION;
+    System.out.println(remoteHash + "   --   " + localHash);
     if (localHash.equals(remoteHash)) {
       result = true;
     }
     //}
 
     if (!result) {
+      System.out.println("mkdir: " + submitter.getAbsolutePath(servantScript.getScriptPath().getParent()));
       submitter.createDirectories(submitter.getAbsolutePath(servantScript.getScriptPath().getParent()));
+      System.out.println("put: waffle servant");
       submitter.transferFilesToRemote(servantScript.generate(), submitter.getAbsolutePath(servantScript.getScriptPath()));
       submitter.transferFilesToRemote(servantScript.getJre(), submitter.getAbsolutePath(servantScript.getJrePath()));
       submitter.transferFilesToRemote(servantScript.getJar(), submitter.getAbsolutePath(servantScript.getJarPath()));
       result = submitter.exists(submitter.getAbsolutePath(servantScript.getScriptPath()));
+      System.out.println("res: " + result);
     }
     submitter.close();
     return result;
@@ -566,6 +571,7 @@ abstract public class AbstractSubmitter {
         computer.setState(ComputerState.Unviable);
       }
     } else {
+      submitter.isStreamInhibited = true;
       submitter.connect(retry);
       Envelope request = submitter.getNextEnvelope();
       request.add(new SendXsubTemplateMessage(computer.getName(), submitter.getXsubType()));
@@ -645,6 +651,9 @@ abstract public class AbstractSubmitter {
     try {
       response = processResponse(sendAndReceiveEnvelope(envelope));
     } catch (Exception e) {
+      if (e.getMessage().startsWith("connection closed")) {
+        this.isBroken = true;
+      }
       InfoLogMessage.issue(computer, "Communication was failed: " + e.getMessage());
     }
 
@@ -734,7 +743,8 @@ abstract public class AbstractSubmitter {
       isRunning = false;
       throw e;
     } catch (ConnectionClosedException e) {
-      InfoLogMessage.issue(e);
+      isRunning = false;
+      throw new FailedToControlRemoteException(e);
     }
   }
 

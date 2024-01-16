@@ -56,6 +56,11 @@ public class SubmitPodTaskRequestProcessor extends RequestProcessor<SubmitPodTas
           //NOP
         }
         response.add(new PodTaskRefusedMessage(message.getJobId()));
+
+        if (!Files.exists(podPath)) {
+          response.add(new PodLostMessage(podPath.getFileName().toString()));
+        }
+
         return;
       }
 

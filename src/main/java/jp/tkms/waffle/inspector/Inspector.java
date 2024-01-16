@@ -78,9 +78,8 @@ public class Inspector extends Thread {
         try {
           submitter.checkSubmitted();
         } catch (FailedToControlRemoteException e) {
-          submitter.close();
           WarnLogMessage.issue(computer, "scanned jobs with error");
-          continue;
+          break;
         }
         InfoLogMessage.issue(computer, "scanned jobs");
       }

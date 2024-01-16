@@ -36,6 +36,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.Semaphore;
 import java.util.function.Consumer;
 
 @CommunicatorDescription("Pod Wrapper (pre-allocating workspace by a job)")
@@ -62,6 +63,7 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
 
   private JobManager jobManager;
   AbstractSubmitter targetSubmitter;
+  private Set<String> prevLostPods = new HashSet<>();
 
   public PodWrappedSubmitter(Computer computer) {
     super(computer);
@@ -235,6 +237,38 @@ public class PodWrappedSubmitter extends AbstractSubmitterWrapper {
           jobManager.deactivateExecutor(message.getId());
         } else if (message.getState() == UpdatePodStatusMessage.FINISHED) {
           jobManager.removeExecutor(message.getId());
+        }
+      }
+
+      Set<String> lostPods = new HashSet<>();
+      for (PodLostMessage message : response.getMessageBundle().getCastedMessageList(PodLostMessage.class)) {
+        lostPods.add(message.getPodId());
+      }
+      for (String lostPodId : prevLostPods) {
+        if (lostPods.contains(lostPodId)) {
+          InfoLogMessage.issue("Pod(" + lostPodId + ") was lost. It will be removed from active pods.");
+          try {
+            jobManager.deactivateExecutor(lostPodId);
+          } catch (Exception e) {
+            //NOP
+          }
+        }
+      }
+      prevLostPods.clear();
+      for (String lostPodId : lostPods) {
+        try {
+          VirtualJobExecutor pod = jobManager.getRunningExecutor(lostPodId);
+          switch (pod.getState()) {
+            case None:
+            case Created:
+            case Prepared:
+            case Submitted:
+              break;
+            default:
+              prevLostPods.add(lostPodId);
+          }
+        } catch (Exception e) {
+          //NOP
         }
       }
     }
