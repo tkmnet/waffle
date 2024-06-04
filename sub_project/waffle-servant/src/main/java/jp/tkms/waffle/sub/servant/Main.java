@@ -54,7 +54,9 @@ public class Main {
             exitWithInvalidArgumentsMessage("main", "- [TIMEOUT]");
           }
 
-          timeout = 3600;
+          if (timeout < 600) {
+            timeout = 600;
+          }
           int timeoutByMillis = timeout * 1000;
           Thread timeoutThread = new Thread(()->{
             while (true) {
